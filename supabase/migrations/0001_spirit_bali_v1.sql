@@ -387,8 +387,20 @@ begin
     end if;
   end loop;
 
-  -- Pass 2: Pay winners in clockwise seat order from (udeg_limit + total ayahan)
-  foreach v_uid in array v_round.settlement_order
+  -- Pass 2: Pay winners in priority order (Triple -> Nilai 9 -> Normal, then clockwise seat_order)
+  for v_uid in
+    select rp.user_id
+    from public.round_players rp
+    join public.round_reveals rev on rev.round_id = rp.round_id and rev.user_id = rp.user_id
+    where rp.round_id = p_round_id and not rp.is_dealer
+    order by
+      case
+        when (rev.evaluated_hand->>'rank')::integer <= v_dealer_rank then 3
+        when rev.evaluated_hand->>'handType' = 'TRIPLE' then 0
+        when (rev.evaluated_hand->>'numericScore')::integer = 9 then 1
+        else 2
+      end,
+      rp.seat_order
   loop
     select * into v_rp from public.round_players where round_id = p_round_id and user_id = v_uid;
     select evaluated_hand into v_eval from public.round_reveals where round_id = p_round_id and user_id = v_uid;

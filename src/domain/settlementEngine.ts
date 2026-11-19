@@ -132,108 +132,121 @@ export function settleRound(input: SettlementInput): SettlementOutput {
     }
   }
 
-  // Pass 2: Pay winners in clockwise seat order from (udegLimit + totalCollected ayahan).
+function payoutTier(hand: EvaluatedHand): 0 | 1 | 2 {
+  if (hand.handType === 'TRIPLE') return 0;
+  if (hand.numericScore === 9) return 1;
+  return 2;
+}
+
+  // Pass 2: Pay winners in priority order (Triple -> Nilai 9 -> Normal, tie-broken by clockwise seatOrder)
+  // from (udegLimit + totalCollected ayahan).
   let udegRemaining = input.udegLimit + totalCollected;
   let totalPaid = 0;
-  const settlements: RoundSettlement[] = [];
+  const settlementByPlayer: Record<string, RoundSettlement> = {};
 
-  for (const p of input.playersInOrder) {
+  const winnersInPriority = input.playersInOrder
+    .filter((p) => outcomes[p.playerId] === 'WIN')
+    .sort((a, b) => {
+      const tierDiff =
+        payoutTier(playerHands[a.playerId]!) - payoutTier(playerHands[b.playerId]!);
+      return tierDiff !== 0 ? tierDiff : a.seatOrder - b.seatOrder;
+    });
+
+  for (const p of winnersInPriority) {
     const hand = playerHands[p.playerId]!;
-    const outcome = outcomes[p.playerId]!;
     const udegBefore = udegRemaining;
+    const multiplier = winMultiplier(hand, rules);
+    const claim = p.bet * multiplier;
 
-    if (outcome === 'WIN') {
-      const multiplier = winMultiplier(hand, rules);
-      const claim = p.bet * multiplier;
+    if (claim <= udegRemaining) {
+      udegRemaining -= claim;
+      totalPaid += claim;
+      dealerDelta -= claim;
+      playerFinalBalances[p.playerId] = p.startingBalance + claim;
 
-      if (claim <= udegRemaining) {
-        udegRemaining -= claim;
-        totalPaid += claim;
-        dealerDelta -= claim;
-        playerFinalBalances[p.playerId] = p.startingBalance + claim;
+      settlementByPlayer[p.playerId] = Object.freeze({
+        roundId: input.roundId,
+        playerId: p.playerId,
+        seatOrder: p.seatOrder,
+        bet: p.bet,
+        outcome: 'WIN',
+        multiplier,
+        claim,
+        paid: claim,
+        loss: 0,
+        balanceDelta: claim,
+        paymentStatus: 'PAID',
+        udegBefore,
+        udegAfter: udegRemaining,
+      });
 
-        settlements.push(
-          Object.freeze({
-            roundId: input.roundId,
-            playerId: p.playerId,
-            seatOrder: p.seatOrder,
-            bet: p.bet,
-            outcome: 'WIN',
-            multiplier,
-            claim,
-            paid: claim,
-            loss: 0,
-            balanceDelta: claim,
-            paymentStatus: 'PAID',
-            udegBefore,
-            udegAfter: udegRemaining,
-          })
-        );
-
-        const baseKey = `${input.roundId}:${p.playerId}:PAYOUT`;
-        ledgerEntries.push(
-          Object.freeze({
-            id: `${baseKey}:P`,
-            roundId: input.roundId,
-            participantId: p.playerId,
-            counterpartyId: input.dealerId,
-            signedAmount: claim,
-            kind: 'PAYOUT',
-            settlementKey: `${baseKey}:P`,
-          }),
-          Object.freeze({
-            id: `${baseKey}:D`,
-            roundId: input.roundId,
-            participantId: input.dealerId,
-            counterpartyId: p.playerId,
-            signedAmount: -claim,
-            kind: 'PAYOUT',
-            settlementKey: `${baseKey}:D`,
-          })
-        );
-      } else {
-        // WIN but (udegLimit + ayahan) remaining is insufficient => SKIPPED_UDEG (never converted to LOSE)
-        playerFinalBalances[p.playerId] = p.startingBalance;
-
-        settlements.push(
-          Object.freeze({
-            roundId: input.roundId,
-            playerId: p.playerId,
-            seatOrder: p.seatOrder,
-            bet: p.bet,
-            outcome: 'WIN',
-            multiplier,
-            claim,
-            paid: 0,
-            loss: 0,
-            balanceDelta: 0,
-            paymentStatus: 'SKIPPED_UDEG',
-            udegBefore,
-            udegAfter: udegRemaining,
-          })
-        );
-      }
-    } else {
-      const loss = p.bet * rules.dealerWinMultiplier;
-      settlements.push(
+      const baseKey = `${input.roundId}:${p.playerId}:PAYOUT`;
+      ledgerEntries.push(
         Object.freeze({
+          id: `${baseKey}:P`,
           roundId: input.roundId,
-          playerId: p.playerId,
-          seatOrder: p.seatOrder,
-          bet: p.bet,
-          outcome: 'LOSE',
-          multiplier: 1,
-          claim: 0,
-          paid: 0,
-          loss,
-          balanceDelta: -loss,
-          paymentStatus: 'COLLECTED',
-          udegBefore,
-          udegAfter: udegRemaining,
+          participantId: p.playerId,
+          counterpartyId: input.dealerId,
+          signedAmount: claim,
+          kind: 'PAYOUT',
+          settlementKey: `${baseKey}:P`,
+        }),
+        Object.freeze({
+          id: `${baseKey}:D`,
+          roundId: input.roundId,
+          participantId: input.dealerId,
+          counterpartyId: p.playerId,
+          signedAmount: -claim,
+          kind: 'PAYOUT',
+          settlementKey: `${baseKey}:D`,
         })
       );
+    } else {
+      // WIN but (udegLimit + ayahan) remaining is insufficient => SKIPPED_UDEG (never converted to LOSE)
+      playerFinalBalances[p.playerId] = p.startingBalance;
+
+      settlementByPlayer[p.playerId] = Object.freeze({
+        roundId: input.roundId,
+        playerId: p.playerId,
+        seatOrder: p.seatOrder,
+        bet: p.bet,
+        outcome: 'WIN',
+        multiplier,
+        claim,
+        paid: 0,
+        loss: 0,
+        balanceDelta: 0,
+        paymentStatus: 'SKIPPED_UDEG',
+        udegBefore,
+        udegAfter: udegRemaining,
+      });
     }
   }
+
+  for (const p of input.playersInOrder) {
+    if (outcomes[p.playerId] === 'LOSE') {
+      const loss = p.bet * rules.dealerWinMultiplier;
+      settlementByPlayer[p.playerId] = Object.freeze({
+        roundId: input.roundId,
+        playerId: p.playerId,
+        seatOrder: p.seatOrder,
+        bet: p.bet,
+        outcome: 'LOSE',
+        multiplier: 1,
+        claim: 0,
+        paid: 0,
+        loss,
+        balanceDelta: -loss,
+        paymentStatus: 'COLLECTED',
+        udegBefore: udegRemaining,
+        udegAfter: udegRemaining,
+      });
+    }
+  }
+
+  const settlements: RoundSettlement[] = input.playersInOrder.map(
+    (p) => settlementByPlayer[p.playerId]!
+  );
 
   const dealerFinalBalance = input.dealerStartingBalance + dealerDelta;
 

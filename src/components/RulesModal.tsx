@@ -87,7 +87,7 @@ export function RulesModal({ open, onClose }: RulesModalProps) {
             <li><strong>Skor:</strong> Total titik modulo 10. <strong>Triple</strong> = 3 kartu balak berbeda (peringkat tertinggi, rank 10).</li>
             <li><strong>Seri:</strong> Nilai normal sama maupun Triple vs Triple selalu dimenangkan bandar.</li>
             <li><strong>Bandar menang:</strong> Meski dengan 9 atau Triple, bandar tetap menerima hanya 1× bet.</li>
-            <li><strong>Udeg & Ayahan (Fixed / Skip):</strong> Nominal Udeg dipilih bandar per ronde. Kekalahan/seri pemain (<em>ayahan</em> bandar) dikumpulkan lebih dulu menambah kolam bayar (<code>Udeg + Ayahan</code>). Jika klaim tetap melebihi sisa kolam, status dicatat <em>Menang · dilewati</em> (Rp0) dan pembayaran lanjut ke kursi berikutnya.</li>
+            <li><strong>Udeg, Ayahan & Prioritas Bayar:</strong> Nominal Udeg dipilih bandar per ronde. Kekalahan/seri pemain (<em>ayahan</em> bandar) dikumpulkan lebih dulu menambah kolam bayar (<code>Udeg + Ayahan</code>). Pembayaran pemenang diutamakan dari <strong>Triple → Nilai 9 → Lainnya</strong> (searah jarum jam jika setingkat). Jika klaim tetap melebihi sisa kolam, dicatat <em>Menang · dilewati</em> (Rp0).</li>
             <li><strong>Rotasi bandar:</strong> Berpindah searah jarum jam tepat setelah 3 ronde selesai (tidak dipicu oleh 9 murni).</li>
           </ul>
         </section>

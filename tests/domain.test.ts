@@ -183,23 +183,28 @@ describe('Spirit Bali v1.0 — Settlement & Udeg (T10–T15, T19, T21–T23, T25
       ],
     });
 
+    // Priority payout: Base Udeg 200k + 40k ayahan (P4) = 240k pool.
+    // 1. P3 Triple (90k) => PAID (+90k), pool 150k
+    // 2. P2 Nilai 9 (120k) => PAID (+120k), pool 30k
+    // 3. P1 Normal (50k) => SKIPPED_UDEG (0), pool 30k
+    // 4. P5 Normal (20k) => PAID (+20k), pool 10k
     expect(settled.settlements.map((s) => s.balanceDelta)).toEqual([
-      50_000,
-      120_000,
       0,
+      120_000,
+      90_000,
       -40_000,
       20_000,
     ]);
-    expect(settled.settlements[2]?.outcome).toBe('WIN'); // T25: never converted to LOSE
+    expect(settled.settlements[0]?.outcome).toBe('WIN'); // T25: never converted to LOSE
+    expect(settled.settlements[0]?.paymentStatus).toBe('SKIPPED_UDEG');
+    expect(settled.settlements[2]?.outcome).toBe('WIN');
     expect(settled.settlements[2]?.multiplier).toBe(3);
-    expect(settled.settlements[2]?.claim).toBe(90_000);
-    expect(settled.settlements[2]?.paymentStatus).toBe('SKIPPED_UDEG');
-    expect(settled.totalPaid).toBe(190_000);
+    expect(settled.settlements[2]?.paymentStatus).toBe('PAID');
+    expect(settled.totalPaid).toBe(230_000);
     expect(settled.totalCollected).toBe(40_000);
-    expect(settled.dealerDelta).toBe(-150_000);
-    expect(settled.dealerFinalBalance).toBe(850_000);
-    // Base Udeg 200k + 40k ayahan from P4 = 240k pool; paid 50k + 120k + 20k = 190k => remaining 50k
-    expect(settled.udegRemaining).toBe(50_000);
+    expect(settled.dealerDelta).toBe(-190_000);
+    expect(settled.dealerFinalBalance).toBe(810_000);
+    expect(settled.udegRemaining).toBe(10_000);
   });
 
   it('T14, T22, T26: Rejects invalid bets, invalid Udeg, and over-balance bets', () => {
