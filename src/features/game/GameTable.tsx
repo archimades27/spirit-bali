@@ -95,7 +95,7 @@ export function GameTable({
             </span>
             <strong style={{ fontSize: '13px' }}>
               {dealerMember?.displayName}
-              {isViewerDealer ? ' (Anda)' : ''}
+              {isViewerDealer && dealerMember?.displayName.toLowerCase() !== 'anda' ? ' (Anda)' : ''}
             </strong>
             <span className="muted mono" style={{ fontSize: '11px' }}>
               {formatRupiah(dealerMember?.balance ?? 0)}

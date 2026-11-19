@@ -24,6 +24,7 @@ export interface CreateRoomInput {
   readonly roomCode: string;
   readonly hostId: string;
   readonly hostName: string;
+  readonly hostIsBot?: boolean;
   readonly maxPlayers?: number;
 }
 
@@ -58,7 +59,7 @@ export function createInitialRoom(input: CreateRoomInput): AuthoritativeRoomStat
     reservedBet: 0,
     ready: true,
     status: 'ACTIVE',
-    isBot: false,
+    isBot: Boolean(input.hostIsBot),
   });
 
   return Object.freeze({

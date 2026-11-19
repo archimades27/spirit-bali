@@ -93,9 +93,9 @@ export const OPEN_ASSUMPTIONS: readonly OpenAssumption[] = Object.freeze([
   },
   {
     id: 'A09',
-    title: 'Metode login & warna pip depan',
+    title: 'Metode login & detail visual',
     defaultBehavior:
-      'Online mendukung Supabase Auth (anonymous/guest atau email); pip depan charcoal pada kertas krem, belakang kuning titik merah.',
+      'Online mendukung Supabase Auth (anonymous/guest atau email); muka kartu domino kertas kuning dengan titik merah (dikonfirmasi pengguna).',
     status: 'ASUMSI_TERBUKA',
   },
 ]);

@@ -26,26 +26,25 @@ export function ResultSheet({ round, members }: ResultSheetProps) {
 
   return (
     <section className="panel-card" aria-label="Hasil settlement ronde">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: '17px' }}>
-            Settlement Ronde #{round.sequence}
-          </h3>
-          <p className="muted" style={{ margin: '2px 0 0', fontSize: '13px' }}>
+      <div style={{ display: 'grid', gap: '6px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
+          <h3 style={{ margin: 0, fontSize: '15px' }}>Settlement Ronde #{round.sequence}</h3>
+          <span className="muted" style={{ fontSize: '12px' }}>
             Bandar: <strong>{nameOf(round.dealerId)}</strong>
             {dealerReveal && (
               <>
                 {' '}·{' '}
                 {dealerReveal.evaluatedHand.handType === 'TRIPLE'
-                  ? `TRIPLE (skor ${dealerReveal.evaluatedHand.numericScore})`
+                  ? `TRIPLE`
                   : `Nilai ${dealerReveal.evaluatedHand.numericScore}`}
               </>
             )}
-          </p>
+          </span>
         </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <span className="badge badge-gold">
-            Sisa Udeg: {formatRupiah(round.udegRemaining)} / {formatRupiah(round.udegLimit)}
+            Udeg Sisa: {formatRupiah(round.udegRemaining)} / {formatRupiah(round.udegLimit)}
           </span>
           <span className={`badge ${round.dealerDelta >= 0 ? 'badge-mint' : 'badge-red'}`}>
             Delta Bandar: {formatSignedRupiah(round.dealerDelta)}
@@ -53,71 +52,76 @@ export function ResultSheet({ round, members }: ResultSheetProps) {
         </div>
       </div>
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Urutan</th>
-              <th>Pemain</th>
-              <th>Tangan</th>
-              <th>Status</th>
-              <th>Bet</th>
-              <th>Klaim</th>
-              <th>Delta Bersih</th>
-              <th>Udeg Sisa</th>
-            </tr>
-          </thead>
-          <tbody>
-            {round.settlements.map((s) => {
-              const rev = round.reveals[s.playerId];
-              const isTie = rev && rev.evaluatedHand.rank === dealerRank;
-              return (
-                <tr key={s.playerId}>
-                  <td className="mono">#{s.seatOrder}</td>
-                  <td><strong>{nameOf(s.playerId)}</strong></td>
-                  <td>
-                    {rev
-                      ? rev.evaluatedHand.handType === 'TRIPLE'
+      <div style={{ display: 'grid', gap: '8px' }}>
+        {round.settlements.map((s) => {
+          const rev = round.reveals[s.playerId];
+          const isTie = rev && rev.evaluatedHand.rank === dealerRank;
+          return (
+            <div
+              key={s.playerId}
+              style={{
+                background: 'var(--soft)',
+                border: '1px solid var(--line)',
+                borderRadius: '10px',
+                padding: '9px 10px',
+                display: 'grid',
+                gap: '6px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700 }}>
+                  <span className="mono" style={{ color: 'var(--accent)', marginRight: '5px' }}>
+                    #{s.seatOrder}
+                  </span>
+                  {nameOf(s.playerId)}
+                  {rev && (
+                    <span className="muted" style={{ fontWeight: 500, marginLeft: '6px', fontSize: '12px' }}>
+                      {rev.evaluatedHand.handType === 'TRIPLE'
                         ? `TRIPLE (${rev.evaluatedHand.numericScore})`
-                        : `Nilai ${rev.evaluatedHand.numericScore}${rev.evaluatedHand.isPureNine ? ' · 9 Murni' : ''}`
-                      : '—'}
-                  </td>
-                  <td>
-                    {s.paymentStatus === 'SKIPPED_UDEG' ? (
-                      <span className="badge badge-gold">
-                        Menang ({s.multiplier}×) · dilewati, Udeg tidak cukup
-                      </span>
-                    ) : s.outcome === 'WIN' ? (
-                      <span className="badge badge-mint">
-                        Menang ({s.multiplier}×) · Dibayar
-                      </span>
-                    ) : (
-                      <span className="badge badge-red">
-                        {isTie ? 'Seri · Bandar menang' : 'Kalah (1×)'}
-                      </span>
-                    )}
-                  </td>
-                  <td>{formatRupiah(s.bet)}</td>
-                  <td>{s.claim > 0 ? formatRupiah(s.claim) : '—'}</td>
-                  <td
-                    className={
-                      s.paymentStatus === 'SKIPPED_UDEG'
-                        ? 'delta-skip'
-                        : s.balanceDelta >= 0
-                          ? 'delta-pos'
-                          : 'delta-neg'
-                    }
-                  >
-                    {s.paymentStatus === 'SKIPPED_UDEG'
-                      ? 'Rp0 (Skip)'
-                      : formatSignedRupiah(s.balanceDelta)}
-                  </td>
-                  <td className="mono">{formatRupiah(s.udegAfter)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                        : `Nilai ${rev.evaluatedHand.numericScore}${rev.evaluatedHand.isPureNine ? ' · 9 Murni' : ''}`}
+                    </span>
+                  )}
+                </span>
+
+                <span
+                  className={`mono ${
+                    s.paymentStatus === 'SKIPPED_UDEG'
+                      ? 'delta-skip'
+                      : s.balanceDelta >= 0
+                        ? 'delta-pos'
+                        : 'delta-neg'
+                  }`}
+                  style={{ fontSize: '13px' }}
+                >
+                  {s.paymentStatus === 'SKIPPED_UDEG'
+                    ? 'Rp0 (Skip)'
+                    : formatSignedRupiah(s.balanceDelta)}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                {s.paymentStatus === 'SKIPPED_UDEG' ? (
+                  <span className="badge badge-gold">
+                    Menang ({s.multiplier}×) · dilewati, Udeg tidak cukup
+                  </span>
+                ) : s.outcome === 'WIN' ? (
+                  <span className="badge badge-mint">
+                    Menang ({s.multiplier}×) · Dibayar
+                  </span>
+                ) : (
+                  <span className="badge badge-red">
+                    {isTie ? 'Seri · Bandar menang' : 'Kalah (1×)'}
+                  </span>
+                )}
+
+                <span className="muted mono" style={{ fontSize: '11px' }}>
+                  Bet {formatRupiah(s.bet)}
+                  {s.claim > 0 ? ` · Klaim ${formatRupiah(s.claim)}` : ''} · Sisa {formatRupiah(s.udegAfter)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

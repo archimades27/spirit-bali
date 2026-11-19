@@ -338,13 +338,13 @@ input[type="number"] {
   overflow: hidden;
 }
 
-/* Subtle oval table rim */
+/* Subtle oval table rim positioned below top dealer bar */
 .table-zone::before {
   content: "";
   position: absolute;
-  inset: 10px 14px;
-  border-radius: 140px / 180px;
-  border: 2px solid rgba(243, 199, 108, 0.16);
+  inset: 58px 12px 12px;
+  border-radius: 120px / 150px;
+  border: 1.5px solid rgba(243, 199, 108, 0.16);
   pointer-events: none;
 }
 
@@ -565,17 +565,19 @@ input[type="number"] {
 }
 
 /* =========================================================
-   TRADITIONAL PAPER DOMINOES (62:114 aspect ratio)
+   TRADITIONAL INDONESIAN PAPER DOMINOES (62:114 aspect ratio)
+   Front: Yellow paper with vibrant red dots & red divider
+   Back: Classic crimson & gold lattice with yellow border
    ========================================================= */
 .paper-domino {
   width: 56px;
   height: 103px;
   border-radius: 6px;
-  border: 1px solid var(--paper-border);
-  background: var(--paper-front);
+  border: 1.5px solid var(--paper-border);
+  background: linear-gradient(160deg, var(--paper-front-hi) 0%, var(--paper-front) 55%, var(--paper-front-lo) 100%);
   display: grid;
   grid-template-rows: 1fr 1fr;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-card), inset 0 0 0 1px rgba(255, 250, 210, 0.55);
   flex-shrink: 0;
   animation: deal-in 200ms ease-out both;
 }
@@ -594,19 +596,25 @@ input[type="number"] {
 
 .paper-domino.is-back {
   background-color: var(--paper-back-bg);
-  background-image: radial-gradient(var(--paper-back-dot) 1.6px, transparent 1.6px);
-  background-size: 9px 9px;
-  border: 3px solid var(--paper-back-border);
+  background-image:
+    radial-gradient(var(--paper-back-dot) 1.3px, transparent 1.3px),
+    radial-gradient(var(--paper-back-dot) 1.3px, transparent 1.3px);
+  background-size: 10px 10px;
+  background-position: 0 0, 5px 5px;
+  border: 2.5px solid var(--paper-back-border);
+  box-shadow: var(--shadow-card);
 }
 
 .paper-domino.size-sm.is-back {
-  background-size: 7px 7px;
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
   border-width: 2px;
 }
 
 .paper-domino.size-xs.is-back {
   background-size: 6px 6px;
-  border-width: 2px;
+  background-position: 0 0, 3px 3px;
+  border-width: 1.5px;
 }
 
 .domino-half {
@@ -623,25 +631,26 @@ input[type="number"] {
 }
 
 .domino-half:first-child {
-  border-bottom: 1px solid var(--paper-divider);
+  border-bottom: 1.5px solid var(--paper-divider);
   padding-bottom: 3px;
 }
 
 .domino-pip {
-  width: 6.5px;
-  height: 6.5px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--paper-pip);
+  box-shadow: inset 0 -1px 1px rgba(90, 8, 12, 0.35);
 }
 
 .paper-domino.size-sm .domino-pip {
-  width: 4.5px;
-  height: 4.5px;
+  width: 5px;
+  height: 5px;
 }
 
 .paper-domino.size-xs .domino-pip {
-  width: 3.5px;
-  height: 3.5px;
+  width: 3.8px;
+  height: 3.8px;
 }
 
 @keyframes deal-in {
@@ -659,18 +668,18 @@ input[type="number"] {
 .callout {
   padding: 10px 12px;
   border-radius: var(--radius-md);
-  border-left: 3px solid var(--accent);
+  border: 1px solid rgba(101, 224, 194, 0.32);
   background: var(--mint-bg);
   font-size: 12.5px;
 }
 
 .callout-gold {
-  border-left-color: var(--gold);
+  border-color: rgba(243, 199, 108, 0.38);
   background: var(--gold-bg);
 }
 
 .callout-red {
-  border-left-color: var(--red);
+  border-color: rgba(240, 127, 141, 0.42);
   background: var(--red-bg);
   color: #ffd3d9;
 }

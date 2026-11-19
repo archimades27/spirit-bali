@@ -66,6 +66,7 @@ export class LocalGameSession {
         roomCode,
         hostId: 'bot-1',
         hostName: BOT_NAMES[0],
+        hostIsBot: true,
         maxPlayers: botCount,
       });
 

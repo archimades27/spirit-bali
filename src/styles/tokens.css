@@ -16,13 +16,15 @@
   --mint-bg: #14332d;
   --gold-bg: #362b16;
 
-  --paper-front: #f0eadb;
-  --paper-border: #c5bda7;
-  --paper-divider: #b6ac97;
-  --paper-pip: #252733;
-  --paper-back-bg: #edc340;
-  --paper-back-dot: #b62936;
-  --paper-back-border: #f8d669;
+  --paper-front: #f6d84c;
+  --paper-front-hi: #fae46b;
+  --paper-front-lo: #e8c32e;
+  --paper-border: #cfa422;
+  --paper-divider: #c81d25;
+  --paper-pip: #c81d25;
+  --paper-back-bg: #a91d24;
+  --paper-back-dot: #f6d84c;
+  --paper-back-border: #f6d84c;
 
   --radius-sm: 8px;
   --radius-md: 12px;
