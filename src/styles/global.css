@@ -621,7 +621,7 @@ input[type="number"] {
 }
 
 .domino-half {
-  margin: 3px 4px;
+  margin: 2px 3px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
@@ -630,27 +630,27 @@ input[type="number"] {
 }
 
 .paper-domino.size-sm .domino-half {
-  margin: 2px 3px;
+  margin: 1.5px 2px;
 }
 
 .paper-domino.size-xs .domino-half {
-  margin: 1.5px 2px;
+  margin: 1px 1.5px;
 }
 
 .domino-half:first-child {
   margin-bottom: 0;
-  padding-bottom: 3px;
+  padding-bottom: 2px;
   border-bottom: 2px solid var(--paper-divider);
 }
 
 .paper-domino.size-xs .domino-half:first-child {
-  padding-bottom: 2px;
+  padding-bottom: 1.5px;
   border-bottom-width: 1.5px;
 }
 
 .domino-pip {
-  width: 8px;
-  height: 8px;
+  width: 11.5px;
+  height: 11.5px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #e22930 0%, var(--paper-pip) 70%, #9b1116 100%);
   box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.35);
@@ -658,32 +658,34 @@ input[type="number"] {
 
 /* Iconic oversized Ace (dot 1) on Indonesian paper dominoes */
 .domino-pip.is-one {
-  width: 16px;
-  height: 16px;
+  grid-column: 1 / -1 !important;
+  grid-row: 1 / -1 !important;
+  width: 22px;
+  height: 22px;
   box-shadow:
-    inset 0 0 0 2px rgba(255, 232, 130, 0.32),
+    inset 0 0 0 2.5px rgba(255, 232, 130, 0.32),
     0 1px 1px rgba(120, 12, 16, 0.35);
 }
 
 .paper-domino.size-sm .domino-pip {
-  width: 5.5px;
-  height: 5.5px;
+  width: 8px;
+  height: 8px;
 }
 
 .paper-domino.size-sm .domino-pip.is-one {
-  width: 11px;
-  height: 11px;
+  width: 15px;
+  height: 15px;
   box-shadow: inset 0 0 0 1.5px rgba(255, 232, 130, 0.32);
 }
 
 .paper-domino.size-xs .domino-pip {
-  width: 4.2px;
-  height: 4.2px;
+  width: 6px;
+  height: 6px;
 }
 
 .paper-domino.size-xs .domino-pip.is-one {
-  width: 8.5px;
-  height: 8.5px;
+  width: 11.5px;
+  height: 11.5px;
   box-shadow: inset 0 0 0 1px rgba(255, 232, 130, 0.3);
 }
 
