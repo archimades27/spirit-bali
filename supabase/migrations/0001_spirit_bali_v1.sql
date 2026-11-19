@@ -231,6 +231,7 @@ revoke insert, update, delete on public.rooms, public.room_members, public.round
   public.ledger_entries, public.settlement_results from anon, authenticated;
 
 -- Pure SQL hand evaluator matching TypeScript rules v1.0 parity
+-- Tiers: NORMAL (0..9) < BESAR (total > 30, rank 10) < TRIPLE (rank 11) < 666 (rank 12)
 create or replace function private.evaluate_hand_v1(p_tiles jsonb)
 returns jsonb
 language plpgsql
@@ -240,11 +241,12 @@ declare
   v_len integer := jsonb_array_length(p_tiles);
   v_total integer := 0;
   v_all_doubles boolean := true;
+  v_all_six boolean := true;
   v_tile jsonb;
   v_a integer;
   v_b integer;
   v_score integer;
-  v_is_triple boolean;
+  v_hand_type text := 'NORMAL';
   v_rank integer;
 begin
   if v_len < 2 or v_len > 3 then
@@ -262,17 +264,33 @@ begin
     if v_a <> v_b then
       v_all_doubles := false;
     end if;
+    if (v_a + v_b) <> 6 then
+      v_all_six := false;
+    end if;
   end loop;
 
   v_score := v_total % 10;
-  v_is_triple := (v_len = 3 and v_all_doubles);
-  v_rank := case when v_is_triple then 10 else v_score end;
+
+  if v_len = 3 and v_all_six then
+    v_hand_type := 'SIX_SIX_SIX';
+    v_rank := 12;
+  elsif v_len = 3 and v_all_doubles then
+    v_hand_type := 'TRIPLE';
+    v_rank := 11;
+  elsif v_total > 30 then
+    v_hand_type := 'BESAR';
+    v_rank := 10;
+  else
+    v_hand_type := 'NORMAL';
+    v_rank := v_score;
+  end if;
 
   return jsonb_build_object(
     'tiles', p_tiles,
+    'totalPips', v_total,
     'numericScore', v_score,
-    'handType', case when v_is_triple then 'TRIPLE' else 'NORMAL' end,
-    'isPureNine', (v_len = 2 and v_score = 9),
+    'handType', v_hand_type,
+    'isPureNine', (v_hand_type = 'NORMAL' and v_len = 2 and v_score = 9),
     'rank', v_rank
   );
 end;
@@ -387,7 +405,7 @@ begin
     end if;
   end loop;
 
-  -- Pass 2: Pay winners in priority order (Triple -> Nilai 9 -> Normal, then clockwise seat_order)
+  -- Pass 2: Pay winners in priority order (666 -> Triple -> Besar -> Nilai 9 -> Normal, then clockwise seat_order)
   for v_uid in
     select rp.user_id
     from public.round_players rp
@@ -395,10 +413,12 @@ begin
     where rp.round_id = p_round_id and not rp.is_dealer
     order by
       case
-        when (rev.evaluated_hand->>'rank')::integer <= v_dealer_rank then 3
-        when rev.evaluated_hand->>'handType' = 'TRIPLE' then 0
-        when (rev.evaluated_hand->>'numericScore')::integer = 9 then 1
-        else 2
+        when (rev.evaluated_hand->>'rank')::integer <= v_dealer_rank then 5
+        when rev.evaluated_hand->>'handType' = 'SIX_SIX_SIX' then 0
+        when rev.evaluated_hand->>'handType' = 'TRIPLE' then 1
+        when rev.evaluated_hand->>'handType' = 'BESAR' then 2
+        when (rev.evaluated_hand->>'numericScore')::integer = 9 then 3
+        else 4
       end,
       rp.seat_order
   loop
@@ -410,8 +430,8 @@ begin
     if v_rank > v_dealer_rank then
       v_outcome := 'WIN';
       v_mult := case
-        when v_eval->>'handType' = 'TRIPLE' then 3
-        when (v_eval->>'numericScore')::integer = 9 then 2
+        when v_eval->>'handType' in ('SIX_SIX_SIX', 'TRIPLE') then 3
+        when v_eval->>'handType' = 'BESAR' or (v_eval->>'numericScore')::integer = 9 then 2
         else 1
       end;
       v_claim := v_rp.bet * v_mult;

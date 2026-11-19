@@ -4,10 +4,12 @@
     { "id": "T01", "tiles": [[1, 3], [2, 6]], "numericScore": 2, "handType": "NORMAL", "isPureNine": false, "rank": 2 },
     { "id": "T02", "tiles": [[6, 6], [3, 4]], "numericScore": 9, "handType": "NORMAL", "isPureNine": true, "rank": 9 },
     { "id": "T03", "tiles": [[5, 5], [4, 6]], "numericScore": 0, "handType": "NORMAL", "isPureNine": false, "rank": 0 },
-    { "id": "T04", "tiles": [[1, 1], [3, 3], [5, 5]], "numericScore": 8, "handType": "TRIPLE", "isPureNine": false, "rank": 10 },
+    { "id": "T04", "tiles": [[1, 1], [3, 3], [5, 5]], "numericScore": 8, "handType": "TRIPLE", "isPureNine": false, "rank": 11 },
     { "id": "T05", "tiles": [[1, 1], [3, 3]], "numericScore": 8, "handType": "NORMAL", "isPureNine": false, "rank": 8 },
     { "id": "T24", "tiles": [[0, 1], [0, 2], [0, 6]], "numericScore": 9, "handType": "NORMAL", "isPureNine": false, "rank": 9 },
-    { "id": "T33", "tiles": [[0, 0], [1, 1], [2, 2]], "numericScore": 6, "handType": "TRIPLE", "isPureNine": false, "rank": 10 }
+    { "id": "T33", "tiles": [[0, 0], [1, 1], [2, 2]], "numericScore": 6, "handType": "TRIPLE", "isPureNine": false, "rank": 11 },
+    { "id": "T37_BESAR", "tiles": [[6, 6], [5, 6], [4, 6]], "numericScore": 3, "handType": "BESAR", "isPureNine": false, "rank": 10 },
+    { "id": "T38_666", "tiles": [[0, 6], [1, 5], [2, 4]], "numericScore": 8, "handType": "SIX_SIX_SIX", "isPureNine": false, "rank": 12 }
   ],
   "canonicalSettlementT19": {
     "udegLimit": 200000,

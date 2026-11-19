@@ -1,4 +1,4 @@
-import type { RoomMember, RoundState } from '../../domain';
+import { formatHandLabel, type RoomMember, type RoundState } from '../../domain';
 import { formatRupiah, formatSignedRupiah } from '../../services/format';
 
 interface ResultSheetProps {
@@ -34,10 +34,7 @@ export function ResultSheet({ round, members }: ResultSheetProps) {
             Bandar: <strong>{nameOf(round.dealerId)}</strong>
             {dealerReveal && (
               <>
-                {' '}·{' '}
-                {dealerReveal.evaluatedHand.handType === 'TRIPLE'
-                  ? `TRIPLE`
-                  : `Nilai ${dealerReveal.evaluatedHand.numericScore}`}
+                {' '}· {formatHandLabel(dealerReveal.evaluatedHand)}
               </>
             )}
           </span>
@@ -78,9 +75,7 @@ export function ResultSheet({ round, members }: ResultSheetProps) {
                   {nameOf(s.playerId)}
                   {rev && (
                     <span className="muted" style={{ fontWeight: 500, marginLeft: '6px', fontSize: '12px' }}>
-                      {rev.evaluatedHand.handType === 'TRIPLE'
-                        ? `TRIPLE (${rev.evaluatedHand.numericScore})`
-                        : `Nilai ${rev.evaluatedHand.numericScore}${rev.evaluatedHand.isPureNine ? ' · 9 Murni' : ''}`}
+                      {formatHandLabel(rev.evaluatedHand)}
                     </span>
                   )}
                 </span>

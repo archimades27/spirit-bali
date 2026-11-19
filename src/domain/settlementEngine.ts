@@ -132,10 +132,12 @@ export function settleRound(input: SettlementInput): SettlementOutput {
     }
   }
 
-function payoutTier(hand: EvaluatedHand): 0 | 1 | 2 {
-  if (hand.handType === 'TRIPLE') return 0;
-  if (hand.numericScore === 9) return 1;
-  return 2;
+function payoutTier(hand: EvaluatedHand): 0 | 1 | 2 | 3 | 4 {
+  if (hand.handType === 'SIX_SIX_SIX') return 0;
+  if (hand.handType === 'TRIPLE') return 1;
+  if (hand.handType === 'BESAR') return 2;
+  if (hand.numericScore === 9) return 3;
+  return 4;
 }
 
   // Pass 2: Pay winners in priority order (Triple -> Nilai 9 -> Normal, tie-broken by clockwise seatOrder)

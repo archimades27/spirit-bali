@@ -12,14 +12,15 @@ export type GamePhase =
   | 'NEXT_ROUND'
   | 'FINISHED';
 
-export type HandType = 'NORMAL' | 'TRIPLE';
+export type HandType = 'NORMAL' | 'BESAR' | 'TRIPLE' | 'SIX_SIX_SIX';
 
 export interface EvaluatedHand {
   readonly tiles: readonly Tile[];
+  readonly totalPips: number;
   readonly numericScore: number; // 0..9
   readonly handType: HandType;
   readonly isPureNine: boolean;
-  readonly rank: number; // 0..9 or 10 for Triple
+  readonly rank: number; // 0..9 NORMAL | 10 BESAR (>30) | 11 TRIPLE | 12 SIX_SIX_SIX (666)
 }
 
 export interface GameRules {

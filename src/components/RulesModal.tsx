@@ -84,10 +84,10 @@ export function RulesModal({ open, onClose }: RulesModalProps) {
           <ul style={{ margin: 0, paddingLeft: '20px', display: 'grid', gap: '6px' }}>
             <li><strong>1 Bandar / Cong vs 1–5 Pemain</strong> memakai 28 kartu domino kertas double-six unik.</li>
             <li><strong>Alur ronde:</strong> Bandar set Udeg → Kartu 1 ke semua → Bet kelipatan Rp10.000 → Kartu 2 ke semua → Stop atau Draw tepat 1 kartu ke-3 (termasuk bandar) → Buka & Settlement.</li>
-            <li><strong>Skor:</strong> Total titik modulo 10. <strong>Triple</strong> = 3 kartu balak berbeda (peringkat tertinggi, rank 10).</li>
-            <li><strong>Seri:</strong> Nilai normal sama maupun Triple vs Triple selalu dimenangkan bandar.</li>
-            <li><strong>Bandar menang:</strong> Meski dengan 9 atau Triple, bandar tetap menerima hanya 1× bet.</li>
-            <li><strong>Udeg, Ayahan & Prioritas Bayar:</strong> Nominal Udeg dipilih bandar per ronde. Kekalahan/seri pemain (<em>ayahan</em> bandar) dikumpulkan lebih dulu menambah kolam bayar (<code>Udeg + Ayahan</code>). Pembayaran pemenang diutamakan dari <strong>Triple → Nilai 9 → Lainnya</strong> (searah jarum jam jika setingkat). Jika klaim tetap melebihi sisa kolam, dicatat <em>Menang · dilewati</em> (Rp0).</li>
+            <li><strong>Tier Kemenangan (terendah → tertinggi):</strong> (1) <strong>Angka 0–9</strong> (total titik mod 10), (2) <strong>Besar</strong> (akumulasi titik &gt; 30), (3) <strong>Triple / Balak</strong> (3 kartu balak berbeda), (4) <strong>666</strong> (3 kartu masing-masing bernilai 6).</li>
+            <li><strong>Seri:</strong> Peringkat sama (termasuk 666 vs 666, Triple vs Triple, Besar vs Besar) selalu dimenangkan bandar.</li>
+            <li><strong>Bandar menang:</strong> Meski dengan kombinasi khusus, bandar tetap menerima hanya 1× bet.</li>
+            <li><strong>Udeg, Ayahan & Prioritas Bayar:</strong> Kekalahan/seri pemain (<em>ayahan</em> bandar) dikumpulkan lebih dulu menambah kolam bayar (<code>Udeg + Ayahan</code>). Pembayaran pemenang diutamakan dari <strong>666 → Triple → Besar → Nilai 9 → Lainnya</strong> (searah jarum jam jika setingkat).</li>
             <li><strong>Rotasi bandar:</strong> Berpindah searah jarum jam tepat setelah 3 ronde selesai (tidak dipicu oleh 9 murni).</li>
           </ul>
         </section>

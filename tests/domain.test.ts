@@ -128,6 +128,24 @@ describe('Spirit Bali v1.0 — Hand Evaluation & Comparison (T01–T09, T24, T33
     expect(settled.settlements[0]?.multiplier).toBe(2);
     expect(settled.settlements[0]?.paid).toBe(100_000);
   });
+
+  it('Tier hierarchy: 666 (rank 12) > TRIPLE (rank 11) > BESAR (>30, rank 10) > Nilai 9 (rank 9)', () => {
+    const nine = evaluateHand([[6, 6], [3, 4]]);
+    const besar = evaluateHand([[6, 6], [5, 6], [4, 6]]); // total 33 > 30
+    const notBesar30 = evaluateHand([[5, 6], [4, 6], [4, 5]]); // total 30 (NOT > 30)
+    const triple = evaluateHand([[0, 0], [1, 1], [2, 2]]);
+    const sixSixSix = evaluateHand([[0, 6], [1, 5], [2, 4]]);
+
+    expect(notBesar30.handType).toBe('NORMAL');
+    expect(besar.handType).toBe('BESAR');
+    expect(besar.totalPips).toBe(33);
+    expect(sixSixSix.handType).toBe('SIX_SIX_SIX');
+
+    expect(compareHands(besar, nine)).toBe('WIN');
+    expect(compareHands(triple, besar)).toBe('WIN');
+    expect(compareHands(sixSixSix, triple)).toBe('WIN');
+    expect(compareHands(sixSixSix, sixSixSix)).toBe('LOSE'); // tie -> dealer
+  });
 });
 
 describe('Spirit Bali v1.0 — Settlement & Udeg (T10–T15, T19, T21–T23, T25–T26)', () => {

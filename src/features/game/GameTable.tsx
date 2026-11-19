@@ -1,4 +1,4 @@
-import { evaluateHand, type SafeRoomSnapshot } from '../../domain';
+import { evaluateHand, formatHandLabel, type SafeRoomSnapshot } from '../../domain';
 import { BetPanel, getBetIntensity } from '../../components/BetPanel';
 import { LeaderboardOverlay } from '../../components/LeaderboardOverlay';
 import { PaperDomino } from '../../components/PaperDomino';
@@ -106,11 +106,15 @@ export function GameTable({
     : viewerWonAsPlayer && viewerSettlement
       ? {
           title:
-            viewerSettlement.multiplier === 3
-              ? 'TRIPLE · 3× MENANG!'
-              : viewerSettlement.multiplier === 2
-                ? 'NILAI 9 · 2× MENANG!'
-                : 'ANDA MENANG!',
+            myEval?.handType === 'SIX_SIX_SIX'
+              ? '666 · JACKPOT 3×!'
+              : myEval?.handType === 'TRIPLE'
+                ? 'TRIPLE · 3× MENANG!'
+                : myEval?.handType === 'BESAR'
+                  ? `BESAR (${myEval.totalPips}) · 2×!`
+                  : viewerSettlement.multiplier === 2
+                    ? 'NILAI 9 · 2× MENANG!'
+                    : 'ANDA MENANG!',
           delta: viewerSettlement.balanceDelta,
           multiplier: viewerSettlement.multiplier,
         }
@@ -174,9 +178,7 @@ export function GameTable({
                   ))}
               {dealerReveal && (
                 <span className="badge badge-gold" style={{ marginLeft: '4px' }}>
-                  {dealerReveal.evaluatedHand.handType === 'TRIPLE'
-                    ? 'TRIPLE'
-                    : `Nilai ${dealerReveal.evaluatedHand.numericScore}`}
+                  {formatHandLabel(dealerReveal.evaluatedHand)}
                 </span>
               )}
               {activeDrawUid === dealerId && (
@@ -224,12 +226,16 @@ export function GameTable({
                       ))}
                   {rev && (
                     <span
-                      className={`badge ${rev.evaluatedHand.handType === 'TRIPLE' ? 'badge-gold' : 'badge-mint'}`}
+                      className={`badge ${rev.evaluatedHand.handType !== 'NORMAL' ? 'badge-gold' : 'badge-mint'}`}
                       style={{ marginLeft: 'auto', fontSize: '10px', padding: '2px 6px' }}
                     >
-                      {rev.evaluatedHand.handType === 'TRIPLE'
-                        ? 'TRIPLE'
-                        : rev.evaluatedHand.numericScore}
+                      {rev.evaluatedHand.handType === 'SIX_SIX_SIX'
+                        ? '666'
+                        : rev.evaluatedHand.handType === 'TRIPLE'
+                          ? 'TRIPLE'
+                          : rev.evaluatedHand.handType === 'BESAR'
+                            ? `BSR ${rev.evaluatedHand.totalPips}`
+                            : rev.evaluatedHand.numericScore}
                     </span>
                   )}
                 </div>
@@ -342,10 +348,14 @@ export function GameTable({
               ))}
               {myEval ? (
                 <div style={{ display: 'grid', gap: '4px', marginLeft: '6px' }}>
-                  <span className={`badge ${myEval.handType === 'TRIPLE' ? 'badge-gold' : 'badge-mint'}`}>
-                    {myEval.handType === 'TRIPLE'
-                      ? 'TRIPLE (3×)'
-                      : `Nilai ${myEval.numericScore}${myEval.numericScore === 9 ? ' (2×)' : ''}`}
+                  <span className={`badge ${myEval.handType !== 'NORMAL' ? 'badge-gold' : 'badge-mint'}`}>
+                    {myEval.handType === 'SIX_SIX_SIX'
+                      ? '666 (3×)'
+                      : myEval.handType === 'TRIPLE'
+                        ? 'TRIPLE (3×)'
+                        : myEval.handType === 'BESAR'
+                          ? `BESAR ${myEval.totalPips} (2×)`
+                          : `Nilai ${myEval.numericScore}${myEval.numericScore === 9 ? ' (2×)' : ''}`}
                   </span>
                   {myEval.isPureNine && (
                     <span className="muted" style={{ fontSize: '11px' }}>9 Murni</span>
