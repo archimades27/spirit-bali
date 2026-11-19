@@ -23,6 +23,7 @@ export function ResultSheet({ round, members }: ResultSheetProps) {
 
   const dealerReveal = round.reveals[round.dealerId];
   const dealerRank = dealerReveal?.evaluatedHand.rank ?? 0;
+  const totalAyahan = round.settlements.reduce((sum, s) => sum + s.loss, 0);
 
   return (
     <section className="panel-card" aria-label="Hasil settlement ronde">
@@ -44,7 +45,8 @@ export function ResultSheet({ round, members }: ResultSheetProps) {
 
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <span className="badge badge-gold">
-            Udeg Sisa: {formatRupiah(round.udegRemaining)} / {formatRupiah(round.udegLimit)}
+            Kolam Udeg: {formatRupiah(round.udegLimit)}
+            {totalAyahan > 0 ? ` + Ayahan ${formatRupiah(totalAyahan)}` : ''} → Sisa {formatRupiah(round.udegRemaining)}
           </span>
           <span className={`badge ${round.dealerDelta >= 0 ? 'badge-mint' : 'badge-red'}`}>
             Delta Bandar: {formatSignedRupiah(round.dealerDelta)}

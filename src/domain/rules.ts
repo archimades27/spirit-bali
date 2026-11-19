@@ -38,9 +38,9 @@ export interface OpenAssumption {
 export const OPEN_ASSUMPTIONS: readonly OpenAssumption[] = Object.freeze([
   {
     id: 'A01',
-    title: 'Penerimaan bandar saat Udeg habis',
+    title: 'Ayahan kemenangan bandar untuk pembayaran Udeg',
     defaultBehavior:
-      'Pemain kalah tetap membayar 1× bet ke bandar; penerimaan tersebut tidak menambah sisa Udeg.',
+      'Dikonfirmasi pengguna: kekalahan/seri pemain (ayahan bandar) dikumpulkan lebih dulu dan menambah kolam pembayaran Udeg (udegLimit + total ayahan) untuk membayar pemenang searah jarum jam.',
     status: 'ASUMSI_TERBUKA',
   },
   {

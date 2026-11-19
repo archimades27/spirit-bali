@@ -198,7 +198,8 @@ describe('Spirit Bali v1.0 — Settlement & Udeg (T10–T15, T19, T21–T23, T25
     expect(settled.totalCollected).toBe(40_000);
     expect(settled.dealerDelta).toBe(-150_000);
     expect(settled.dealerFinalBalance).toBe(850_000);
-    expect(settled.udegRemaining).toBe(10_000);
+    // Base Udeg 200k + 40k ayahan from P4 = 240k pool; paid 50k + 120k + 20k = 190k => remaining 50k
+    expect(settled.udegRemaining).toBe(50_000);
   });
 
   it('T14, T22, T26: Rejects invalid bets, invalid Udeg, and over-balance bets', () => {
@@ -275,23 +276,26 @@ describe('Spirit Bali v1.0 — Settlement & Udeg (T10–T15, T19, T21–T23, T25
     ).toThrow('DUPLICATE_TILE');
   });
 
-  it('T21 & T23: Exact Udeg claim pays full to 0; subsequent loss still collected without adding Udeg', () => {
+  it('T21 & T23 (Ayahan): Loser bet collected first adds to Udeg pool to pay winner exceeding base Udeg', () => {
     const settled = settleRound({
-      roundId: 'r-t21-23',
+      roundId: 'r-t21-23-ayahan',
       dealerId: 'D',
       dealerStartingBalance: 1_000_000,
       dealerTiles: [[0, 5], [0, 0]], // 5
       udegLimit: 50_000,
       playersInOrder: [
-        { playerId: 'P1', seatOrder: 1, bet: 50_000, startingBalance: 1_000_000, tiles: [[3, 4], [0, 1]] }, // 8 -> WIN 50k -> udeg 0
-        { playerId: 'P2', seatOrder: 2, bet: 20_000, startingBalance: 1_000_000, tiles: [[1, 1], [0, 2]] }, // 4 -> LOSE 20k -> udeg stays 0
+        // P1 wins 70k (> 50k base Udeg, but <= 50k + 30k ayahan from P2 = 80k!)
+        { playerId: 'P1', seatOrder: 1, bet: 70_000, startingBalance: 1_000_000, tiles: [[3, 4], [0, 1]] }, // 8 -> WIN 70k
+        // P2 loses 30k -> ayahan +30k collected first into Bandar pool
+        { playerId: 'P2', seatOrder: 2, bet: 30_000, startingBalance: 1_000_000, tiles: [[1, 1], [0, 2]] }, // 4 -> LOSE 30k
       ],
     });
-    expect(settled.settlements[0]?.paid).toBe(50_000);
-    expect(settled.settlements[0]?.udegAfter).toBe(0);
-    expect(settled.settlements[1]?.loss).toBe(20_000);
-    expect(settled.settlements[1]?.udegAfter).toBe(0);
-    expect(settled.udegRemaining).toBe(0);
+    expect(settled.settlements[0]?.paymentStatus).toBe('PAID');
+    expect(settled.settlements[0]?.paid).toBe(70_000);
+    expect(settled.settlements[0]?.udegAfter).toBe(10_000);
+    expect(settled.settlements[1]?.loss).toBe(30_000);
+    expect(settled.dealerDelta).toBe(-40_000);
+    expect(settled.udegRemaining).toBe(10_000);
   });
 });
 
@@ -600,9 +604,10 @@ describe('Spirit Bali v1.0 — Property-based Invariants', () => {
       const sumDelta =
         res.dealerDelta + res.settlements.reduce((s, r) => s + r.balanceDelta, 0);
       expect(sumDelta).toBe(0);
+      const maxPool = udegLimit + res.totalCollected;
       expect(res.udegRemaining).toBeGreaterThanOrEqual(0);
-      expect(res.udegRemaining).toBeLessThanOrEqual(udegLimit);
-      expect(res.totalPaid).toBeLessThanOrEqual(udegLimit);
+      expect(res.udegRemaining).toBeLessThanOrEqual(maxPool);
+      expect(res.totalPaid).toBeLessThanOrEqual(maxPool);
     }
   });
 });

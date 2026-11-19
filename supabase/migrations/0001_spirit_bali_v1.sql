@@ -54,7 +54,7 @@ create table if not exists public.rounds (
   version integer not null default 1,
   deadline timestamptz,
   udeg_limit bigint not null default 0 check (udeg_limit >= 0),
-  udeg_remaining bigint not null default 0 check (udeg_remaining >= 0 and udeg_remaining <= udeg_limit),
+  udeg_remaining bigint not null default 0 check (udeg_remaining >= 0),
   settlement_order uuid[] not null default '{}',
   draw_turn_order uuid[] not null default '{}',
   active_draw_turn_index integer not null default 0,
@@ -358,6 +358,7 @@ begin
   values (p_round_id, v_round.dealer_id, v_dealer_tiles, v_dealer_eval)
   on conflict (round_id, user_id) do nothing;
 
+  -- Pass 1: Evaluate all players & collect ayahan (losses/ties) into Bandar payout pool first
   v_remaining := v_round.udeg_limit;
 
   foreach v_uid in array v_round.settlement_order
@@ -371,6 +372,27 @@ begin
     values (p_round_id, v_uid, v_tiles, v_eval)
     on conflict (round_id, user_id) do nothing;
 
+    if v_rank <= v_dealer_rank then
+      v_remaining := v_remaining + v_rp.bet;
+      v_dealer_delta := v_dealer_delta + v_rp.bet;
+
+      update public.room_members
+        set balance = balance - v_rp.bet, reserved_bet = 0
+        where room_id = v_round.room_id and user_id = v_uid;
+
+      insert into public.ledger_entries (round_id, participant_id, counterparty_id, signed_amount, kind, settlement_key)
+      values
+        (p_round_id, v_uid, v_round.dealer_id, -v_rp.bet, 'COLLECTION', p_round_id::text || ':' || v_uid::text || ':COLLECTION:P'),
+        (p_round_id, v_round.dealer_id, v_uid, v_rp.bet, 'COLLECTION', p_round_id::text || ':' || v_uid::text || ':COLLECTION:D');
+    end if;
+  end loop;
+
+  -- Pass 2: Pay winners in clockwise seat order from (udeg_limit + total ayahan)
+  foreach v_uid in array v_round.settlement_order
+  loop
+    select * into v_rp from public.round_players where round_id = p_round_id and user_id = v_uid;
+    select evaluated_hand into v_eval from public.round_reveals where round_id = p_round_id and user_id = v_uid;
+    v_rank := (v_eval->>'rank')::integer;
     v_udeg_before := v_remaining;
 
     if v_rank > v_dealer_rank then
@@ -415,16 +437,6 @@ begin
       v_loss := v_rp.bet;
       v_delta := -v_rp.bet;
       v_status := 'COLLECTED';
-      v_dealer_delta := v_dealer_delta + v_rp.bet;
-
-      update public.room_members
-        set balance = balance - v_rp.bet, reserved_bet = 0
-        where room_id = v_round.room_id and user_id = v_uid;
-
-      insert into public.ledger_entries (round_id, participant_id, counterparty_id, signed_amount, kind, settlement_key)
-      values
-        (p_round_id, v_uid, v_round.dealer_id, -v_rp.bet, 'COLLECTION', p_round_id::text || ':' || v_uid::text || ':COLLECTION:P'),
-        (p_round_id, v_round.dealer_id, v_uid, v_rp.bet, 'COLLECTION', p_round_id::text || ':' || v_uid::text || ':COLLECTION:D');
     end if;
 
     v_sum_delta := v_sum_delta + v_delta;

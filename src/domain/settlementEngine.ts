@@ -7,6 +7,7 @@ import type {
   GameRules,
   LedgerEntry,
   RoundSettlement,
+  SettlementOutcome,
   Tile,
 } from './types';
 
@@ -84,12 +85,11 @@ export function settleRound(input: SettlementInput): SettlementOutput {
 
   const dealerHand = evaluateHand(input.dealerTiles);
   const playerHands: Record<string, EvaluatedHand> = {};
-  const settlements: RoundSettlement[] = [];
+  const outcomes: Record<string, SettlementOutcome> = {};
   const ledgerEntries: LedgerEntry[] = [];
   const playerFinalBalances: Record<string, number> = {};
 
-  let udegRemaining = input.udegLimit;
-  let totalPaid = 0;
+  // Pass 1: Evaluate all hands and collect ayahan (losses/ties) into the Bandar's payout pool first.
   let totalCollected = 0;
   let dealerDelta = 0;
 
@@ -97,11 +97,49 @@ export function settleRound(input: SettlementInput): SettlementOutput {
     if (!isValidBetAmount(p.bet, p.startingBalance, rules)) {
       throw new Error('INVALID_BET');
     }
-
     const hand = evaluateHand(p.tiles);
     playerHands[p.playerId] = hand;
-
     const outcome = compareHands(hand, dealerHand);
+    outcomes[p.playerId] = outcome;
+
+    if (outcome === 'LOSE') {
+      const loss = p.bet * rules.dealerWinMultiplier;
+      totalCollected += loss;
+      dealerDelta += loss;
+      playerFinalBalances[p.playerId] = p.startingBalance - loss;
+
+      const baseKey = `${input.roundId}:${p.playerId}:COLLECTION`;
+      ledgerEntries.push(
+        Object.freeze({
+          id: `${baseKey}:P`,
+          roundId: input.roundId,
+          participantId: p.playerId,
+          counterpartyId: input.dealerId,
+          signedAmount: -loss,
+          kind: 'COLLECTION',
+          settlementKey: `${baseKey}:P`,
+        }),
+        Object.freeze({
+          id: `${baseKey}:D`,
+          roundId: input.roundId,
+          participantId: input.dealerId,
+          counterpartyId: p.playerId,
+          signedAmount: loss,
+          kind: 'COLLECTION',
+          settlementKey: `${baseKey}:D`,
+        })
+      );
+    }
+  }
+
+  // Pass 2: Pay winners in clockwise seat order from (udegLimit + totalCollected ayahan).
+  let udegRemaining = input.udegLimit + totalCollected;
+  let totalPaid = 0;
+  const settlements: RoundSettlement[] = [];
+
+  for (const p of input.playersInOrder) {
+    const hand = playerHands[p.playerId]!;
+    const outcome = outcomes[p.playerId]!;
     const udegBefore = udegRemaining;
 
     if (outcome === 'WIN') {
@@ -154,7 +192,7 @@ export function settleRound(input: SettlementInput): SettlementOutput {
           })
         );
       } else {
-        // WIN but Udeg insufficient => SKIPPED_UDEG (T12, T25): never converted to LOSE
+        // WIN but (udegLimit + ayahan) remaining is insufficient => SKIPPED_UDEG (never converted to LOSE)
         playerFinalBalances[p.playerId] = p.startingBalance;
 
         settlements.push(
@@ -176,12 +214,7 @@ export function settleRound(input: SettlementInput): SettlementOutput {
         );
       }
     } else {
-      // LOSE (including ties; dealer always collects 1x bet even with 9/Triple; A01: does not replenish Udeg)
       const loss = p.bet * rules.dealerWinMultiplier;
-      totalCollected += loss;
-      dealerDelta += loss;
-      playerFinalBalances[p.playerId] = p.startingBalance - loss;
-
       settlements.push(
         Object.freeze({
           roundId: input.roundId,
@@ -197,28 +230,6 @@ export function settleRound(input: SettlementInput): SettlementOutput {
           paymentStatus: 'COLLECTED',
           udegBefore,
           udegAfter: udegRemaining,
-        })
-      );
-
-      const baseKey = `${input.roundId}:${p.playerId}:COLLECTION`;
-      ledgerEntries.push(
-        Object.freeze({
-          id: `${baseKey}:P`,
-          roundId: input.roundId,
-          participantId: p.playerId,
-          counterpartyId: input.dealerId,
-          signedAmount: -loss,
-          kind: 'COLLECTION',
-          settlementKey: `${baseKey}:P`,
-        }),
-        Object.freeze({
-          id: `${baseKey}:D`,
-          roundId: input.roundId,
-          participantId: input.dealerId,
-          counterpartyId: p.playerId,
-          signedAmount: loss,
-          kind: 'COLLECTION',
-          settlementKey: `${baseKey}:D`,
         })
       );
     }
@@ -268,11 +279,12 @@ export function verifySettlementInvariants(
     }
   }
 
-  if (result.udegRemaining < 0 || result.udegRemaining > input.udegLimit) {
+  const maxPayoutPool = input.udegLimit + result.totalCollected;
+  if (result.udegRemaining < 0 || result.udegRemaining > maxPayoutPool) {
     throw new Error('INVARIANT_UDEG_RANGE_VIOLATED');
   }
 
-  if (result.totalPaid > input.udegLimit) {
+  if (result.totalPaid > maxPayoutPool) {
     throw new Error('INVARIANT_TOTAL_PAID_EXCEEDS_UDEG');
   }
 
