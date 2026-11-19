@@ -103,7 +103,7 @@ export class LocalGameSession {
       }
     }
 
-    // Start immediately into ROUND_SETUP
+    // Start immediately into ROUND_SETUP (and auto-set Udeg if Bandar is a bot)
     const startRes = reduceGameAction(this.state, this.state.hostId, {
       roomId,
       roundId: null,
@@ -112,7 +112,36 @@ export class LocalGameSession {
       type: 'START',
       payload: {},
     });
-    if (startRes.accepted) this.state = startRes.state;
+    if (startRes.accepted) {
+      this.state = startRes.state;
+      this.autoSetBotUdegIfNeeded();
+    }
+  }
+
+  private autoSetBotUdegIfNeeded(): boolean {
+    const round = this.state.currentRound;
+    if (this.state.phase !== 'ROUND_SETUP' || !round) return false;
+    const dealer = this.state.members.find((m) => m.userId === round.dealerId);
+    if (!dealer || !dealer.isBot) return false;
+
+    const ratios = [0.2, 0.25, 0.3] as const;
+    const ratio = ratios[round.sequence % ratios.length] ?? 0.25;
+    const raw = Math.floor((dealer.balance * ratio) / 10_000) * 10_000;
+    const udegAmount = Math.max(10_000, Math.min(dealer.balance, raw));
+
+    const res = reduceGameAction(this.state, dealer.userId, {
+      roomId: this.state.roomId,
+      roundId: round.roundId,
+      actionId: makeActionId('bot-udeg'),
+      expectedVersion: this.state.stateVersion,
+      type: 'SET_UDEG',
+      payload: { amount: udegAmount },
+    });
+    if (res.accepted) {
+      this.state = res.state;
+      return true;
+    }
+    return false;
   }
 
   public getSnapshot(): SafeRoomSnapshot {
@@ -154,6 +183,7 @@ export class LocalGameSession {
     const res = reduceGameAction(this.state, actor, action);
     if (res.accepted) {
       this.state = res.state;
+      this.autoSetBotUdegIfNeeded();
     }
     return res;
   }
@@ -186,31 +216,9 @@ export class LocalGameSession {
     const round = this.state.currentRound;
     if (!round) return false;
 
-    // 1. Bot dealer sets Udeg
+    // 1. Bot dealer sets Udeg (safety net if not already auto-set on round entry)
     if (this.state.phase === 'ROUND_SETUP') {
-      const dealer = this.state.members.find((m) => m.userId === round.dealerId);
-      if (!dealer || !dealer.isBot) return false;
-
-      const targetUdeg = Math.min(
-        dealer.balance,
-        Math.max(10_000, Math.floor((dealer.balance * 0.25) / 10_000) * 10_000)
-      );
-      const udegAmount = Math.min(dealer.balance, Math.max(50_000, targetUdeg));
-      const clamped = Math.min(dealer.balance, Math.floor(udegAmount / 10_000) * 10_000);
-
-      const res = reduceGameAction(this.state, dealer.userId, {
-        roomId: this.state.roomId,
-        roundId: round.roundId,
-        actionId: makeActionId('bot-udeg'),
-        expectedVersion: this.state.stateVersion,
-        type: 'SET_UDEG',
-        payload: { amount: Math.max(10_000, clamped) },
-      });
-      if (res.accepted) {
-        this.state = res.state;
-        return true;
-      }
-      return false;
+      return this.autoSetBotUdegIfNeeded();
     }
 
     // 2. Bot players lock their bets

@@ -19,11 +19,11 @@ interface PaperDominoProps {
 function DominoHalf({ value }: { readonly value: number }) {
   const positions = PIP_POSITIONS[value] ?? [];
   return (
-    <span className="domino-half" aria-hidden="true">
+    <span className={`domino-half pip-count-${value}`} aria-hidden="true">
       {positions.map((pos) => (
         <span
           key={pos}
-          className="domino-pip"
+          className={`domino-pip ${value === 1 ? 'is-one' : ''}`}
           style={{
             gridColumn: ((pos - 1) % 3) + 1,
             gridRow: Math.floor((pos - 1) / 3) + 1,
