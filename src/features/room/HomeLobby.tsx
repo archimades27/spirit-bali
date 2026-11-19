@@ -15,36 +15,26 @@ export function HomeLobby({ onStartLocal, onOpenRules }: HomeLobbyProps) {
   const [role, setRole] = useState<'player' | 'dealer'>('player');
 
   return (
-    <main className="lobby-wrap">
-      <section className="hero-card">
-        <div className="hero-copy" style={{ maxWidth: '540px' }}>
-          <span className="badge badge-mint">RULESET v1.0 · SALDO SIMULASI</span>
-          <h1>
-            Spirit <span>Bali</span>
-          </h1>
-          <p className="muted" style={{ margin: '0 0 12px' }}>
-            Permainan domino kertas tradisional Bali: 1 Bandar / Cong melawan 1–5 pemain.
-            Modal awal Rp1.000.000, sistem Udeg fixed/skip, Triple balak rank tertinggi,
-            dan rotasi bandar setiap 3 ronde.
-          </p>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button type="button" className="btn-ghost" onClick={onOpenRules}>
-              Baca Aturan v1.0 & Asumsi (A01–A09)
-            </button>
-          </div>
-        </div>
-
-        <div className="hand-row" aria-label="Ilustrasi kartu domino kertas Spirit Bali">
-          <div style={{ transform: 'rotate(-6deg)' }}>
-            <PaperDomino tile={[1, 3]} />
+    <main className="lobby-portrait">
+      <section className="portrait-hero">
+        <span className="badge badge-gold">MOBILE PORTRAIT · RULESET v1.0</span>
+        <h1>
+          Spirit <span>Bali</span>
+        </h1>
+        <div className="hand-row" aria-label="Ilustrasi kartu domino kertas">
+          <div style={{ transform: 'rotate(-7deg)' }}>
+            <PaperDomino tile={[1, 3]} size="sm" />
           </div>
           <div style={{ transform: 'rotate(2deg)' }}>
-            <PaperDomino tile={[6, 6]} />
+            <PaperDomino tile={[6, 6]} size="sm" />
           </div>
           <div style={{ transform: 'rotate(8deg)' }}>
-            <PaperDomino faceDown />
+            <PaperDomino faceDown size="sm" />
           </div>
         </div>
+        <p className="muted" style={{ margin: 0, fontSize: '12.5px', maxWidth: '320px' }}>
+          1 Bandar / Cong vs 1–5 Pemain · Modal simulasi Rp1.000.000 · Udeg Fixed/Skip · Rotasi 3 Ronde.
+        </p>
       </section>
 
       <div className="mode-tabs" role="tablist" aria-label="Mode permainan">
@@ -55,7 +45,7 @@ export function HomeLobby({ onStartLocal, onOpenRules }: HomeLobbyProps) {
           className="mode-tab"
           onClick={() => setTab('local')}
         >
-          Main Langsung (vs Bot AI)
+          Main Offline (Bot)
         </button>
         <button
           type="button"
@@ -64,98 +54,94 @@ export function HomeLobby({ onStartLocal, onOpenRules }: HomeLobbyProps) {
           className="mode-tab"
           onClick={() => setTab('online')}
         >
-          Multiplayer Online (Supabase)
+          Online (Supabase)
         </button>
       </div>
 
       {tab === 'local' ? (
-        <section className="panel-card" aria-label="Pengaturan meja lokal">
-          <div>
-            <h2 style={{ margin: '0 0 4px', fontSize: '20px' }}>Buat Meja Simulasi</h2>
-            <p className="muted" style={{ margin: 0, fontSize: '14px' }}>
-              Menggunakan engine domain v1.0 yang sama (CSPRNG Fisher–Yates, settlement atomik, rotasi 3 ronde).
-            </p>
+        <section className="panel-card" aria-label="Pengaturan meja">
+          <div className="field">
+            <label htmlFor="player-name">Nama Tampilan</label>
+            <input
+              id="player-name"
+              type="text"
+              maxLength={24}
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              placeholder="Nama Anda"
+            />
           </div>
 
-          <div className="form-grid">
-            <div className="field">
-              <label htmlFor="player-name">Nama Anda</label>
-              <input
-                id="player-name"
-                type="text"
-                maxLength={24}
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                placeholder="Nama tampilan"
-              />
+          <div className="field">
+            <label>Jumlah Lawan (Bot)</label>
+            <div className="pill-row" role="group" aria-label="Pilih jumlah lawan">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className="pill-btn"
+                  aria-pressed={botCount === n}
+                  onClick={() => setBotCount(n)}
+                >
+                  {n}
+                </button>
+              ))}
             </div>
+          </div>
 
-            <div className="field">
-              <label htmlFor="bot-count">Jumlah Lawan (1–5)</label>
-              <select
-                id="bot-count"
-                value={botCount}
-                onChange={(e) => setBotCount(Number(e.target.value))}
+          <div className="field">
+            <label>Peran Awal</label>
+            <div className="pill-row-2" role="group" aria-label="Pilih peran awal">
+              <button
+                type="button"
+                className="pill-btn"
+                aria-pressed={role === 'player'}
+                onClick={() => setRole('player')}
               >
-                <option value={1}>1 Lawan (Meja 2 orang)</option>
-                <option value={2}>2 Lawan (Meja 3 orang)</option>
-                <option value={3}>3 Lawan (Meja 4 orang)</option>
-                <option value={4}>4 Lawan (Meja 5 orang)</option>
-                <option value={5}>5 Lawan (Meja 6 orang penuh)</option>
-              </select>
-            </div>
-
-            <div className="field">
-              <label htmlFor="start-role">Peran Awal</label>
-              <select
-                id="start-role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as 'player' | 'dealer')}
+                Pemain (#1)
+              </button>
+              <button
+                type="button"
+                className="pill-btn"
+                aria-pressed={role === 'dealer'}
+                onClick={() => setRole('dealer')}
               >
-                <option value="player">Pemain #1 (Pasang Bet)</option>
-                <option value="dealer">Bandar / Cong (Tentukan Udeg)</option>
-              </select>
+                Bandar / Cong
+              </button>
             </div>
           </div>
 
-          <div className="action-row">
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() =>
-                onStartLocal({
-                  playerName: playerName.trim() || 'Anda',
-                  botCount,
-                  humanStartsAsDealer: role === 'dealer',
-                })
-              }
-            >
-              Mulai Meja Spirit Bali
-            </button>
-          </div>
+          <button
+            type="button"
+            className="btn-primary thumb-cta"
+            onClick={() =>
+              onStartLocal({
+                playerName: playerName.trim() || 'Anda',
+                botCount,
+                humanStartsAsDealer: role === 'dealer',
+              })
+            }
+          >
+            Mulai Meja Spirit Bali
+          </button>
+
+          <button type="button" className="btn-ghost" onClick={onOpenRules}>
+            Panduan Aturan v1.0 & Asumsi (A01–A09)
+          </button>
         </section>
       ) : (
-        <section className="panel-card" aria-label="Multiplayer Online Supabase">
-          <div>
-            <h2 style={{ margin: '0 0 4px', fontSize: '20px' }}>Multiplayer Online (Supabase)</h2>
-            <p className="muted" style={{ margin: 0, fontSize: '14px' }}>
-              Arsitektur otoritatif: Edge Function <code>submit-game-action</code> + Postgres transactional RPC + RLS + private schema.
-            </p>
-          </div>
-
+        <section className="panel-card" aria-label="Mode Online Supabase">
           {isSupabaseConfigured ? (
             <div className="callout">
-              <strong>Supabase terhubung.</strong> Siap menjalankan sesi multiplayer online melalui Edge Function gateway.
+              <strong>Supabase terhubung.</strong> Siap untuk sesi multiplayer online.
             </div>
           ) : (
             <div className="callout callout-gold">
-              <strong>Backend Supabase belum dikonfigurasi pada build GitHub Pages ini.</strong>
-              <p style={{ margin: '8px 0 0', fontSize: '13px' }}>
-                Untuk mengaktifkan multiplayer online, jalankan migrasi{' '}
-                <code>supabase/migrations/0001_spirit_bali_v1.sql</code>, deploy Edge Function{' '}
-                <code>supabase/functions/submit-game-action</code>, lalu set repository secrets/vars{' '}
-                <code>VITE_SUPABASE_URL</code> dan <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> pada GitHub Actions.
-                Sementara itu, Anda dapat langsung bermain di tab <strong>Main Langsung (vs Bot AI)</strong>.
+              <strong>Backend Supabase belum dihubungkan pada build statis ini.</strong>
+              <p style={{ margin: '6px 0 0', fontSize: '12px' }}>
+                Jalankan migrasi <code>supabase/migrations/0001_spirit_bali_v1.sql</code> dan Edge Function{' '}
+                <code>submit-game-action</code>, lalu set <code>VITE_SUPABASE_URL</code> dan{' '}
+                <code>VITE_SUPABASE_PUBLISHABLE_KEY</code>. Gunakan tab <strong>Main Offline (Bot)</strong> untuk langsung bermain.
               </p>
             </div>
           )}

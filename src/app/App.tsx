@@ -1,14 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
-import type { SafeRoomSnapshot } from '../domain';
+import type { GamePhase, SafeRoomSnapshot } from '../domain';
+import { LedgerModal } from '../components/LedgerModal';
 import { RulesModal } from '../components/RulesModal';
 import { GameTable } from '../features/game/GameTable';
 import { HomeLobby } from '../features/room/HomeLobby';
 import { LocalGameSession, type LocalGameConfig } from '../services/localGameEngine';
 
+const PHASE_SHORT: Readonly<Record<GamePhase, string>> = {
+  LOBBY: 'Lobi',
+  ROUND_SETUP: 'Set Udeg',
+  FIRST_DEAL: 'Bagi 1',
+  BETTING: 'Betting',
+  SECOND_DEAL: 'Bagi 2',
+  DRAW_DECISION: 'Stop/Draw',
+  REVEAL: 'Buka',
+  SETTLEMENT: 'Settle',
+  NEXT_ROUND: 'Hasil',
+  FINISHED: 'Selesai',
+};
+
 export function App() {
   const sessionRef = useRef<LocalGameSession | null>(null);
   const [snapshot, setSnapshot] = useState<SafeRoomSnapshot | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [ledgerOpen, setLedgerOpen] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   function syncSnapshot() {
@@ -28,10 +43,11 @@ export function App() {
     sessionRef.current = null;
     setSnapshot(null);
     setSecondsLeft(null);
+    setLedgerOpen(false);
     window.location.hash = '#/';
   }
 
-  // Step bot actions smoothly so user can observe Udeg, bets, and Stop/Draw turns
+  // Step bot actions smoothly so user can watch Udeg, bets, and Stop/Draw turns
   useEffect(() => {
     if (!snapshot || !sessionRef.current) return;
     if (
@@ -104,44 +120,86 @@ export function App() {
   }
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          SPIRIT <span>/ BALI</span>
-        </div>
-        <div className="topbar-actions">
-          <button type="button" onClick={() => setRulesOpen(true)}>
-            Aturan v1.0
-          </button>
-          {snapshot && (
-            <button type="button" className="btn-ghost" onClick={handleExitLobby}>
-              Keluar Meja
+    <div className="portrait-stage">
+      <div className="portrait-shell">
+        {/* ZONA 1: Single-Row Compact Top HUD */}
+        <header className="hud-bar">
+          <div className="hud-left">
+            <div className="brand-mini">
+              SPIRIT<span>/BALI</span>
+            </div>
+            {snapshot && (
+              <>
+                <span className="badge badge-mint">
+                  R#{snapshot.roundSequence} · {PHASE_SHORT[snapshot.phase]}
+                </span>
+                {secondsLeft !== null && (
+                  <span className={`badge ${secondsLeft <= 10 ? 'badge-red' : ''}`}>
+                    {secondsLeft}d
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="hud-actions">
+            {snapshot && (
+              <button
+                type="button"
+                className="hud-btn"
+                onClick={() => setLedgerOpen(true)}
+                aria-label="Buka ledger dan riwayat"
+              >
+                Riwayat
+              </button>
+            )}
+            <button
+              type="button"
+              className="hud-btn"
+              onClick={() => setRulesOpen(true)}
+              aria-label="Aturan permainan"
+            >
+              ?
             </button>
-          )}
-        </div>
-      </header>
+            {snapshot && (
+              <button
+                type="button"
+                className="hud-btn btn-ghost"
+                onClick={handleExitLobby}
+                aria-label="Keluar meja"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </header>
 
-      {snapshot && sessionRef.current ? (
-        <GameTable
+        {snapshot && sessionRef.current ? (
+          <GameTable
+            snapshot={snapshot}
+            viewerId={sessionRef.current.humanUserId}
+            onSetUdeg={handleSetUdeg}
+            onPlaceBet={handlePlaceBet}
+            onStop={handleStop}
+            onDraw={handleDraw}
+            onNextRound={handleNextRound}
+            onOpenLedger={() => setLedgerOpen(true)}
+            onExitLobby={handleExitLobby}
+          />
+        ) : (
+          <HomeLobby
+            onStartLocal={handleStartLocal}
+            onOpenRules={() => setRulesOpen(true)}
+          />
+        )}
+
+        <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
+        <LedgerModal
+          open={ledgerOpen}
           snapshot={snapshot}
-          viewerId={sessionRef.current.humanUserId}
-          secondsLeft={secondsLeft}
-          modeLabel="Lokal"
-          onSetUdeg={handleSetUdeg}
-          onPlaceBet={handlePlaceBet}
-          onStop={handleStop}
-          onDraw={handleDraw}
-          onNextRound={handleNextRound}
-          onExitLobby={handleExitLobby}
+          onClose={() => setLedgerOpen(false)}
         />
-      ) : (
-        <HomeLobby
-          onStartLocal={handleStartLocal}
-          onOpenRules={() => setRulesOpen(true)}
-        />
-      )}
-
-      <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
+      </div>
     </div>
   );
 }

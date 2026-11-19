@@ -13,7 +13,7 @@ const PIP_POSITIONS: Readonly<Record<number, readonly number[]>> = {
 interface PaperDominoProps {
   readonly tile?: Tile;
   readonly faceDown?: boolean;
-  readonly size?: 'md' | 'sm';
+  readonly size?: 'md' | 'sm' | 'xs';
 }
 
 function DominoHalf({ value }: { readonly value: number }) {
@@ -35,7 +35,7 @@ function DominoHalf({ value }: { readonly value: number }) {
 }
 
 export function PaperDomino({ tile, faceDown = false, size = 'md' }: PaperDominoProps) {
-  const sizeClass = size === 'sm' ? 'size-sm' : '';
+  const sizeClass = size === 'sm' ? 'size-sm' : size === 'xs' ? 'size-xs' : '';
 
   if (faceDown || !tile) {
     return (

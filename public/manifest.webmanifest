@@ -1,0 +1,10 @@
+{
+  "name": "Spirit Bali — Domino Kertas",
+  "short_name": "Spirit Bali",
+  "description": "Permainan domino kertas tradisional Bali (Ruleset v1.0) — Mobile Portrait Edition",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0C1017",
+  "theme_color": "#0C1017"
+}

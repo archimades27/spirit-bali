@@ -19,48 +19,48 @@ export function BetPanel({
   disabled = false,
   onSubmit,
 }: BetPanelProps) {
-  const defaultVal = mode === 'UDEG' ? Math.min(200_000, maxAmount) : Math.min(20_000, maxAmount);
-  const [rawValue, setRawValue] = useState(String(Math.max(step, defaultVal)));
+  const initial = mode === 'UDEG' ? Math.min(200_000, maxAmount) : Math.min(20_000, maxAmount);
+  const [amount, setAmount] = useState(Math.max(step, Math.floor(initial / step) * step));
   const [error, setError] = useState<string | null>(null);
 
   const presets = mode === 'UDEG' ? PRESETS_UDEG : PRESETS_BET;
-  const label = mode === 'UDEG' ? 'Nominal Udeg Ronde Ini' : 'Taruhan Anda';
-  const cta = mode === 'UDEG' ? 'Kunci Udeg & Bagikan Kartu' : 'Kunci Taruhan';
+  const cta = mode === 'UDEG' ? 'Set Udeg' : 'Kunci Bet';
+
+  function adjust(delta: number) {
+    const next = Math.max(step, Math.min(maxAmount, amount + delta));
+    setAmount(next);
+    setError(null);
+  }
 
   function handleConfirm() {
-    const parsed = Number(rawValue);
-    if (!Number.isSafeInteger(parsed) || parsed < step || parsed % step !== 0) {
-      setError(`Masukkan kelipatan ${formatRupiah(step)} (minimal ${formatRupiah(step)}).`);
+    if (!Number.isSafeInteger(amount) || amount < step || amount % step !== 0) {
+      setError(`Kelipatan ${formatRupiah(step)} (min ${formatRupiah(step)}).`);
       return;
     }
-    if (parsed > maxAmount) {
-      setError(`Maksimal ${formatRupiah(maxAmount)} sesuai saldo tersedia.`);
+    if (amount > maxAmount) {
+      setError(`Maksimal ${formatRupiah(maxAmount)}.`);
       return;
     }
-    const err = onSubmit(parsed);
-    setError(err);
+    setError(onSubmit(amount));
   }
 
   return (
-    <div style={{ display: 'grid', gap: '10px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
-        <label htmlFor={`amount-${mode}`} style={{ fontWeight: 700, fontSize: '14px' }}>
-          {label}
-        </label>
-        <span className="muted" style={{ fontSize: '13px' }}>
-          Saldo tersedia: <strong>{formatRupiah(maxAmount)}</strong>
-        </span>
-      </div>
-
-      <div className="preset-row">
+    <div style={{ display: 'grid', gap: '7px' }}>
+      <div className="bet-presets-compact">
         {presets.map((amt) => (
           <button
             key={amt}
             type="button"
-            className="preset-btn"
+            className="bet-preset-chip"
             disabled={disabled || amt > maxAmount}
+            aria-pressed={amount === amt}
+            style={
+              amount === amt
+                ? { borderColor: mode === 'UDEG' ? 'var(--gold)' : 'var(--accent)' }
+                : undefined
+            }
             onClick={() => {
-              setRawValue(String(amt));
+              setAmount(amt);
               setError(null);
             }}
           >
@@ -69,35 +69,44 @@ export function BetPanel({
         ))}
       </div>
 
-      <div className="action-row">
-        <div style={{ flex: '1 1 160px' }}>
-          <input
-            id={`amount-${mode}`}
-            type="number"
-            inputMode="numeric"
-            min={step}
-            max={maxAmount}
-            step={step}
-            value={rawValue}
-            disabled={disabled}
-            onChange={(e) => {
-              setRawValue(e.target.value);
-              if (error) setError(null);
-            }}
-          />
+      <div className="bet-stepper-row">
+        <button
+          type="button"
+          className="step-btn"
+          aria-label={`Kurangi ${formatShortK(step)}`}
+          disabled={disabled || amount <= step}
+          onClick={() => adjust(-step)}
+        >
+          −
+        </button>
+
+        <div className="bet-display" aria-live="polite">
+          {formatRupiah(amount)}
         </div>
+
+        <button
+          type="button"
+          className="step-btn"
+          aria-label={`Tambah ${formatShortK(step)}`}
+          disabled={disabled || amount + step > maxAmount}
+          onClick={() => adjust(step)}
+        >
+          +
+        </button>
+
         <button
           type="button"
           className={mode === 'UDEG' ? 'btn-gold' : 'btn-primary'}
           disabled={disabled}
           onClick={handleConfirm}
+          style={{ padding: '0 16px' }}
         >
           {cta}
         </button>
       </div>
 
       {error && (
-        <div className="callout callout-red" role="alert">
+        <div className="callout callout-red" role="alert" style={{ padding: '6px 10px' }}>
           {error}
         </div>
       )}
