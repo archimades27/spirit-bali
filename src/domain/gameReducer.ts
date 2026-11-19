@@ -26,6 +26,8 @@ export interface CreateRoomInput {
   readonly hostName: string;
   readonly hostIsBot?: boolean;
   readonly maxPlayers?: number;
+  readonly sessionMode?: 'ENDLESS' | 'ONE_CYCLE';
+  readonly randomizeInitialDealer?: boolean;
 }
 
 export interface ReducerOptions {
@@ -67,10 +69,13 @@ export function createInitialRoom(input: CreateRoomInput): AuthoritativeRoomStat
     roomCode: input.roomCode,
     hostId: input.hostId,
     rules,
+    sessionMode: input.sessionMode ?? 'ENDLESS',
+    randomizeInitialDealer: Boolean(input.randomizeInitialDealer),
     phase: 'LOBBY',
     stateVersion: 1,
     dealerId: input.hostId,
     dealerRoundsCompleted: 0,
+    dealersServed: Object.freeze([]),
     roundSequence: 0,
     members: Object.freeze([hostMember]),
     currentRound: null,
@@ -105,10 +110,12 @@ export function projectSafeSnapshot(
     roomCode: state.roomCode,
     hostId: state.hostId,
     rules: state.rules,
+    sessionMode: state.sessionMode,
     phase: state.phase,
     stateVersion: state.stateVersion,
     dealerId: state.dealerId,
     dealerRoundsCompleted: state.dealerRoundsCompleted,
+    dealersServed: state.dealersServed,
     roundSequence: state.roundSequence,
     members: state.members,
     currentRound: state.currentRound,
@@ -350,7 +357,26 @@ function finalizeRevealAndSettlement(
     rules: state.rules,
   });
 
-  const nextPhase = rotation.shouldFinish ? 'FINISHED' : 'NEXT_ROUND';
+  // Track completed Bandar turns for ONE_CYCLE mode (all participants serve as Bandar once)
+  const dealerFinishedTurn =
+    rotation.rotated ||
+    state.dealerRoundsCompleted + 1 >= state.rules.dealerRotationRounds ||
+    rotation.shouldFinish;
+
+  const nextDealersServed =
+    dealerFinishedTurn && !state.dealersServed.includes(round.dealerId)
+      ? Object.freeze([...state.dealersServed, round.dealerId])
+      : state.dealersServed;
+
+  const eligibleAfter = nextMembers.filter(
+    (m) => m.status !== 'LEFT' && !m.pendingLeave && m.balance >= state.rules.betStep
+  );
+  const allEligibleServed =
+    state.sessionMode === 'ONE_CYCLE' &&
+    eligibleAfter.every((m) => nextDealersServed.includes(m.userId));
+
+  const nextPhase =
+    rotation.shouldFinish || allEligibleServed ? 'FINISHED' : 'NEXT_ROUND';
 
   const completedRound: RoundState = Object.freeze({
     ...round,
@@ -380,6 +406,7 @@ function finalizeRevealAndSettlement(
     stateVersion: state.stateVersion + 1,
     dealerId: rotation.nextDealerId ?? state.dealerId,
     dealerRoundsCompleted: rotation.nextDealerRoundsCompleted,
+    dealersServed: nextDealersServed,
     members: Object.freeze(nextMembers),
     currentRound: completedRound,
     privateRound,
@@ -579,9 +606,19 @@ export function reduceGameAction(
       return reject(action, state, 'INVALID_STATE', 'Semua peserta harus siap terlebih dahulu.');
     }
 
+    let initialDealerId = state.hostId;
+    if (state.randomizeInitialDealer) {
+      const buf = new Uint32Array(1);
+      globalThis.crypto.getRandomValues(buf);
+      const picked = activeMembers[buf[0]! % activeMembers.length];
+      if (picked) {
+        initialDealerId = picked.userId;
+      }
+    }
+
     const nextState = createRoundSetupState(
       state,
-      state.hostId,
+      initialDealerId,
       0,
       nowMs,
       roundIdFactory

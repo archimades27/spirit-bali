@@ -562,6 +562,108 @@ describe('Spirit Bali v1.0 — State Machine, Security, Rotation, Idempotency (T
     expect(state.dealerRoundsCompleted).toBe(0); // T36: rotation counter unchanged
     expect(state.members.every((m) => m.reservedBet === 0 && m.balance === 1_000_000)).toBe(true);
   });
+
+  it('ONE_CYCLE mode finishes immediately after every participant completes their Bandar turn', () => {
+    let state = createInitialRoom({
+      roomId: 'room-cycle',
+      roomCode: 'CYCLE1',
+      hostId: 'A',
+      hostName: 'A',
+      maxPlayers: 1,
+      sessionMode: 'ONE_CYCLE',
+      randomizeInitialDealer: true,
+    });
+    const joinB = reduceGameAction(state, 'B', {
+      roomId: 'room-cycle',
+      roundId: null,
+      actionId: 'join-b',
+      expectedVersion: state.stateVersion,
+      type: 'JOIN_ROOM',
+      payload: { displayName: 'B', isBot: true },
+    });
+    expect(joinB.accepted).toBe(true);
+    if (joinB.accepted) state = joinB.state;
+
+    const start = reduceGameAction(state, 'A', {
+      roomId: 'room-cycle',
+      roundId: null,
+      actionId: 'start-cycle',
+      expectedVersion: state.stateVersion,
+      type: 'START',
+      payload: {},
+    });
+    expect(start.accepted).toBe(true);
+    if (start.accepted) state = start.state;
+
+    // 2 participants x 3 rounds per Bandar = 6 rounds total => FINISHED!
+    for (let r = 1; r <= 6; r += 1) {
+      expect(state.phase).toBe('ROUND_SETUP');
+      const roundId = state.currentRound!.roundId;
+      const dealerId = state.currentRound!.dealerId;
+      const playerId = state.currentRound!.settlementOrder[0]!;
+
+      const udeg = reduceGameAction(state, dealerId, {
+        roomId: 'room-cycle',
+        roundId,
+        actionId: `u-${r}`,
+        expectedVersion: state.stateVersion,
+        type: 'SET_UDEG',
+        payload: { amount: 50_000 },
+      });
+      expect(udeg.accepted).toBe(true);
+      if (udeg.accepted) state = udeg.state;
+
+      const bet = reduceGameAction(state, playerId, {
+        roomId: 'room-cycle',
+        roundId,
+        actionId: `b-${r}`,
+        expectedVersion: state.stateVersion,
+        type: 'PLACE_BET',
+        payload: { amount: 10_000 },
+      });
+      expect(bet.accepted).toBe(true);
+      if (bet.accepted) state = bet.state;
+
+      const stopP = reduceGameAction(state, playerId, {
+        roomId: 'room-cycle',
+        roundId,
+        actionId: `sp-${r}`,
+        expectedVersion: state.stateVersion,
+        type: 'STOP',
+        payload: {},
+      });
+      expect(stopP.accepted).toBe(true);
+      if (stopP.accepted) state = stopP.state;
+
+      const stopD = reduceGameAction(state, dealerId, {
+        roomId: 'room-cycle',
+        roundId,
+        actionId: `sd-${r}`,
+        expectedVersion: state.stateVersion,
+        type: 'STOP',
+        payload: {},
+      });
+      expect(stopD.accepted).toBe(true);
+      if (stopD.accepted) state = stopD.state;
+
+      if (r < 6) {
+        expect(state.phase).toBe('NEXT_ROUND');
+        const next = reduceGameAction(state, 'A', {
+          roomId: 'room-cycle',
+          roundId,
+          actionId: `nx-${r}`,
+          expectedVersion: state.stateVersion,
+          type: 'NEXT_ROUND',
+          payload: {},
+        });
+        expect(next.accepted).toBe(true);
+        if (next.accepted) state = next.state;
+      }
+    }
+
+    expect(state.phase).toBe('FINISHED');
+    expect(state.dealersServed.length).toBe(2);
+  });
 });
 
 describe('Spirit Bali v1.0 — Property-based Invariants', () => {

@@ -932,6 +932,249 @@ dialog::backdrop {
   }
 }
 
+/* =========================================================
+   TOH-TOHAN / BET INTENSITY EFFECTS
+   ========================================================= */
+.intensity-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.intensity-tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.intensity-tag.tier-low {
+  color: var(--accent);
+}
+
+.intensity-tag.tier-warm {
+  color: var(--gold);
+}
+
+.intensity-tag.tier-hot {
+  color: #ff9843;
+}
+
+.intensity-tag.tier-allin {
+  color: #ff5768;
+}
+
+.intensity-bar-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.intensity-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 180ms ease, background-color 180ms ease;
+}
+
+.intensity-bar-fill.tier-low {
+  background: var(--accent);
+}
+
+.intensity-bar-fill.tier-warm {
+  background: linear-gradient(90deg, #e5b242, #f7d84c);
+}
+
+.intensity-bar-fill.tier-hot {
+  background: linear-gradient(90deg, #f3a43b, #ff6a2b);
+}
+
+.intensity-bar-fill.tier-allin {
+  background: linear-gradient(90deg, #ff7b2b, #ff334b);
+}
+
+.bet-display.tier-low {
+  color: var(--accent);
+  border-color: rgba(101, 224, 194, 0.45);
+  animation: bet-pop 160ms ease-out;
+}
+
+.bet-display.tier-warm {
+  color: var(--gold);
+  border-color: rgba(243, 199, 108, 0.7);
+  box-shadow: 0 0 14px rgba(243, 199, 108, 0.25);
+  animation: bet-pop 180ms ease-out;
+}
+
+.bet-display.tier-hot {
+  color: #ff9c47;
+  border-color: rgba(255, 130, 50, 0.85);
+  box-shadow: 0 0 18px rgba(255, 118, 43, 0.38);
+  animation: bet-shake 220ms ease-out;
+}
+
+.bet-display.tier-allin {
+  color: #ff6b7a;
+  border-color: #ff4458;
+  background: linear-gradient(180deg, #2a0e16, #14080c);
+  box-shadow: 0 0 22px rgba(255, 56, 79, 0.5);
+  animation: bet-shake 260ms ease-out;
+}
+
+.btn-hot {
+  background: linear-gradient(135deg, #ff8b2b, #e62e42);
+  color: #fff;
+  border-color: #ff9c47;
+  box-shadow: 0 0 16px rgba(255, 88, 56, 0.38);
+}
+
+.bet-chip {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.bet-chip.tier-low {
+  color: var(--gold);
+}
+
+.bet-chip.tier-warm {
+  color: var(--gold);
+  background: rgba(243, 199, 108, 0.14);
+  border-color: rgba(243, 199, 108, 0.4);
+}
+
+.bet-chip.tier-hot {
+  color: #ff9c47;
+  background: rgba(255, 120, 40, 0.18);
+  border-color: rgba(255, 120, 40, 0.55);
+}
+
+.bet-chip.tier-allin {
+  color: #ff6b7a;
+  background: rgba(255, 56, 79, 0.22);
+  border-color: rgba(255, 56, 79, 0.65);
+}
+
+@keyframes bet-pop {
+  0% {
+    transform: scale(0.95);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes bet-shake {
+  0%,
+  100% {
+    transform: translateX(0) scale(1);
+  }
+  25% {
+    transform: translateX(-3px) scale(1.04);
+  }
+  55% {
+    transform: translateX(3px) scale(1.04);
+  }
+  80% {
+    transform: translateX(-1.5px) scale(1.01);
+  }
+}
+
+/* =========================================================
+   LEADERBOARD OVERLAY (END OF 1 FULL BANDAR CYCLE)
+   ========================================================= */
+.leaderboard-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  background: rgba(6, 10, 16, 0.88);
+  padding: 16px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.leaderboard-card {
+  width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  background: linear-gradient(165deg, #162333 0%, #101722 75%);
+  border: 1.5px solid rgba(243, 199, 108, 0.5);
+  border-radius: var(--radius-lg);
+  padding: 18px 14px;
+  display: grid;
+  gap: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
+  animation: deal-in 240ms ease-out both;
+}
+
+.leaderboard-head {
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+
+.leaderboard-head h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.5px;
+}
+
+.leaderboard-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.leaderboard-row {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.leaderboard-row.is-champion {
+  background: linear-gradient(135deg, rgba(58, 44, 14, 0.9), rgba(26, 37, 52, 0.92));
+  border-color: var(--gold);
+  box-shadow: 0 0 18px rgba(243, 199, 108, 0.22);
+}
+
+.leaderboard-row.is-you {
+  border-color: var(--accent);
+}
+
+.lb-rank {
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.lb-name {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.lb-score {
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

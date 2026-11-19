@@ -83,6 +83,8 @@ export class OnlineRoomSession {
         hostId: this.userId,
         hostName: this.displayName,
         maxPlayers: params.maxPlayers ?? 5,
+        sessionMode: 'ONE_CYCLE',
+        randomizeInitialDealer: true,
       });
       this.latestSnapshot = projectSafeSnapshot(this.hostState, this.userId);
     }

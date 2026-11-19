@@ -1,5 +1,6 @@
 import { evaluateHand, type SafeRoomSnapshot } from '../../domain';
-import { BetPanel } from '../../components/BetPanel';
+import { BetPanel, getBetIntensity } from '../../components/BetPanel';
+import { LeaderboardOverlay } from '../../components/LeaderboardOverlay';
 import { PaperDomino } from '../../components/PaperDomino';
 import { WinCelebration } from '../../components/WinCelebration';
 import { formatRupiah, formatShortK, formatSignedRupiah } from '../../services/format';
@@ -115,11 +116,23 @@ export function GameTable({
         }
       : null;
 
+  const totalCycleSeats = snapshot.members.filter((m) => m.status !== 'LEFT').length;
+  const currentCyclePos = Math.min(totalCycleSeats, snapshot.dealersServed.length + 1);
+
   return (
     <div className="portrait-game">
+      {snapshot.phase === 'FINISHED' && (
+        <LeaderboardOverlay
+          snapshot={snapshot}
+          viewerId={viewerId}
+          onOpenLedger={onOpenLedger}
+          onExitLobby={onExitLobby}
+        />
+      )}
+
       {/* ZONA 2: Vertical Oval Felt Table */}
       <section className="table-zone" aria-label="Meja Spirit Bali">
-        {winBanner && round && (
+        {winBanner && round && snapshot.phase !== 'FINISHED' && (
           <WinCelebration
             roundKey={round.roundId}
             title={winBanner.title}
@@ -131,7 +144,7 @@ export function GameTable({
         <div className="dealer-top">
           <div className="dealer-bar">
             <span className="badge badge-gold">
-              ★ BANDAR · R{dealerRoundNumber}/{snapshot.rules.dealerRotationRounds}
+              ★ BANDAR {snapshot.sessionMode === 'ONE_CYCLE' ? `${currentCyclePos}/${totalCycleSeats} · ` : ''}R{dealerRoundNumber}/{snapshot.rules.dealerRotationRounds}
             </span>
             <strong style={{ fontSize: '13px' }}>
               {dealerMember?.displayName}
@@ -195,8 +208,10 @@ export function GameTable({
                     {m.displayName}
                   </span>
                   {rp && rp.betLocked && (
-                    <span className="mono" style={{ fontSize: '11px', color: 'var(--gold)' }}>
-                      {formatShortK(rp.bet)}
+                    <span
+                      className={`bet-chip mono tier-${getBetIntensity(rp.bet, m.balance).level}`}
+                    >
+                      {rp.bet >= 100_000 ? '🔥' : ''}{formatShortK(rp.bet)}
                     </span>
                   )}
                 </div>

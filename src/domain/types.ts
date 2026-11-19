@@ -116,6 +116,7 @@ export type ActionErrorCode =
 
 export type DrawDecision = 'PENDING' | 'STOP' | 'DRAW';
 export type ParticipantStatus = 'ACTIVE' | 'WAITING_NEXT_ROUND' | 'LEFT' | 'BANKRUPT';
+export type SessionMode = 'ENDLESS' | 'ONE_CYCLE';
 
 export interface RoomMember {
   readonly userId: string;
@@ -187,10 +188,13 @@ export interface AuthoritativeRoomState {
   readonly roomCode: string;
   readonly hostId: string;
   readonly rules: GameRules;
+  readonly sessionMode: SessionMode;
+  readonly randomizeInitialDealer: boolean;
   readonly phase: GamePhase;
   readonly stateVersion: number;
   readonly dealerId: string;
   readonly dealerRoundsCompleted: number; // 0..3
+  readonly dealersServed: readonly string[]; // userIds that finished their Bandar turn
   readonly roundSequence: number;
   readonly members: readonly RoomMember[];
   readonly currentRound: RoundState | null;
@@ -220,10 +224,12 @@ export interface SafeRoomSnapshot {
   readonly roomCode: string;
   readonly hostId: string;
   readonly rules: GameRules;
+  readonly sessionMode: SessionMode;
   readonly phase: GamePhase;
   readonly stateVersion: number;
   readonly dealerId: string;
   readonly dealerRoundsCompleted: number;
+  readonly dealersServed: readonly string[];
   readonly roundSequence: number;
   readonly members: readonly RoomMember[];
   readonly currentRound: RoundState | null;

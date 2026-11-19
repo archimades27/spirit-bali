@@ -45,6 +45,7 @@ export class LocalGameSession {
         hostId: this.humanUserId,
         hostName: config.playerName || 'Anda',
         maxPlayers: botCount,
+        sessionMode: 'ONE_CYCLE',
       });
 
       for (let i = 0; i < botCount; i += 1) {
@@ -68,6 +69,7 @@ export class LocalGameSession {
         hostName: BOT_NAMES[0],
         hostIsBot: true,
         maxPlayers: botCount,
+        sessionMode: 'ONE_CYCLE',
       });
 
       const joinHuman = reduceGameAction(this.state, this.humanUserId, {
