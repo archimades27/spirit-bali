@@ -1,6 +1,7 @@
 import { evaluateHand, type SafeRoomSnapshot } from '../../domain';
 import { BetPanel } from '../../components/BetPanel';
 import { PaperDomino } from '../../components/PaperDomino';
+import { WinCelebration } from '../../components/WinCelebration';
 import { formatRupiah, formatShortK, formatSignedRupiah } from '../../services/format';
 
 interface GameTableProps {
@@ -83,10 +84,49 @@ export function GameTable({
   const viewerSettlement = round?.settlements.find((s) => s.playerId === viewerId);
   const skipCount = round?.settlements.filter((s) => s.paymentStatus === 'SKIPPED_UDEG').length ?? 0;
 
+  const isSettledPhase =
+    Boolean(round) &&
+    !round?.cancelledReason &&
+    (snapshot.phase === 'NEXT_ROUND' || snapshot.phase === 'FINISHED');
+
+  const viewerWonAsDealer = isSettledPhase && isViewerDealer && (round?.dealerDelta ?? 0) > 0;
+  const viewerWonAsPlayer =
+    isSettledPhase &&
+    !isViewerDealer &&
+    viewerSettlement?.outcome === 'WIN' &&
+    viewerSettlement.balanceDelta > 0;
+
+  const winBanner = viewerWonAsDealer
+    ? {
+        title: 'BANDAR MENANG!',
+        delta: round!.dealerDelta,
+        multiplier: 1 as const,
+      }
+    : viewerWonAsPlayer && viewerSettlement
+      ? {
+          title:
+            viewerSettlement.multiplier === 3
+              ? 'TRIPLE · 3× MENANG!'
+              : viewerSettlement.multiplier === 2
+                ? 'NILAI 9 · 2× MENANG!'
+                : 'ANDA MENANG!',
+          delta: viewerSettlement.balanceDelta,
+          multiplier: viewerSettlement.multiplier,
+        }
+      : null;
+
   return (
     <div className="portrait-game">
       {/* ZONA 2: Vertical Oval Felt Table */}
       <section className="table-zone" aria-label="Meja Spirit Bali">
+        {winBanner && round && (
+          <WinCelebration
+            roundKey={round.roundId}
+            title={winBanner.title}
+            delta={winBanner.delta}
+            multiplier={winBanner.multiplier}
+          />
+        )}
         {/* Top of Oval: Bandar / Cong */}
         <div className="dealer-top">
           <div className="dealer-bar">
@@ -258,7 +298,10 @@ export function GameTable({
       </section>
 
       {/* ZONA 3: Your Private Hand */}
-      <section className="hand-zone" aria-label="Kartu tangan Anda">
+      <section
+        className={`hand-zone ${winBanner ? 'is-win-glow' : ''}`}
+        aria-label="Kartu tangan Anda"
+      >
         <div className="hand-zone-head">
           <span>
             <strong>{viewerMember?.displayName ?? 'Anda'}</strong>{' '}

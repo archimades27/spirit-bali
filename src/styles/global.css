@@ -815,6 +815,123 @@ dialog::backdrop {
   gap: 12px;
 }
 
+/* =========================================================
+   WIN CELEBRATION ANIMATION (Confetti Burst + Toast + Glow)
+   ========================================================= */
+.win-celebration-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confetti-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--drift, 16px), 340px, 0) rotate(540deg);
+  }
+}
+
+.win-toast {
+  background: linear-gradient(155deg, rgba(16, 48, 40, 0.96), rgba(11, 24, 30, 0.96));
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 12px 20px;
+  text-align: center;
+  display: grid;
+  gap: 2px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6), 0 0 28px rgba(101, 224, 194, 0.35);
+  animation: win-toast-pop 2.3s cubic-bezier(0.2, 0.85, 0.3, 1.15) forwards;
+}
+
+.win-toast.is-triple {
+  background: linear-gradient(155deg, rgba(58, 42, 12, 0.97), rgba(24, 18, 8, 0.97));
+  border-color: var(--gold);
+  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.65), 0 0 32px rgba(243, 199, 108, 0.45);
+}
+
+.win-toast-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.win-toast-amount {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+.win-toast.is-triple .win-toast-amount {
+  color: var(--gold);
+}
+
+@keyframes win-toast-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.65) translateY(16px);
+  }
+  16% {
+    opacity: 1;
+    transform: scale(1.06) translateY(0);
+  }
+  26% {
+    transform: scale(1) translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-12px);
+  }
+}
+
+.hand-zone.is-win-glow {
+  animation: hand-win-glow 1.2s ease-out 2;
+  border-top-color: var(--gold);
+}
+
+@keyframes hand-win-glow {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 rgba(243, 199, 108, 0);
+  }
+  50% {
+    box-shadow: inset 0 0 28px rgba(101, 224, 194, 0.28);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

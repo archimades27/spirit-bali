@@ -1,7 +1,16 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+function normalizeSupabaseUrl(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  return raw.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+}
+
+const supabaseUrl = normalizeSupabaseUrl(
+  import.meta.env.VITE_SUPABASE_URL as string | undefined
+);
+const supabaseKey = (
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined
+)?.trim();
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
@@ -21,6 +30,11 @@ export function getSupabaseClient(): SupabaseClient | null {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 15,
+        },
       },
     });
   }
