@@ -1,0 +1,284 @@
+import { validateUniqueTiles } from './deck';
+import { compareHands } from './handComparator';
+import { evaluateHand, winMultiplier } from './handEvaluator';
+import { RULES_V1_0 } from './rules';
+import type {
+  EvaluatedHand,
+  GameRules,
+  LedgerEntry,
+  RoundSettlement,
+  Tile,
+} from './types';
+
+export interface SettlementPlayerInput {
+  readonly playerId: string;
+  readonly seatOrder: number;
+  readonly bet: number;
+  readonly startingBalance: number;
+  readonly tiles: readonly Tile[];
+}
+
+export interface SettlementInput {
+  readonly roundId: string;
+  readonly dealerId: string;
+  readonly dealerStartingBalance: number;
+  readonly dealerTiles: readonly Tile[];
+  readonly udegLimit: number;
+  readonly playersInOrder: readonly SettlementPlayerInput[];
+  readonly rules?: GameRules;
+}
+
+export interface SettlementOutput {
+  readonly roundId: string;
+  readonly dealerHand: EvaluatedHand;
+  readonly playerHands: Readonly<Record<string, EvaluatedHand>>;
+  readonly settlements: readonly RoundSettlement[];
+  readonly ledgerEntries: readonly LedgerEntry[];
+  readonly totalPaid: number;
+  readonly totalCollected: number;
+  readonly dealerDelta: number;
+  readonly dealerFinalBalance: number;
+  readonly playerFinalBalances: Readonly<Record<string, number>>;
+  readonly udegRemaining: number;
+}
+
+export function isValidBetAmount(
+  amount: number,
+  availableBalance: number,
+  rules: GameRules = RULES_V1_0
+): boolean {
+  return (
+    Number.isSafeInteger(amount) &&
+    amount >= rules.betStep &&
+    amount % rules.betStep === 0 &&
+    amount <= availableBalance
+  );
+}
+
+export function isValidUdegAmount(
+  amount: number,
+  dealerBalance: number,
+  rules: GameRules = RULES_V1_0
+): boolean {
+  return (
+    Number.isSafeInteger(amount) &&
+    amount >= rules.betStep &&
+    amount % rules.betStep === 0 &&
+    amount <= dealerBalance
+  );
+}
+
+export function settleRound(input: SettlementInput): SettlementOutput {
+  const rules = input.rules ?? RULES_V1_0;
+
+  if (!isValidUdegAmount(input.udegLimit, input.dealerStartingBalance, rules)) {
+    throw new Error('INVALID_UDEG');
+  }
+
+  // Validate no duplicate tiles across dealer and all players (T15)
+  const allTiles: Tile[] = [...input.dealerTiles];
+  for (const p of input.playersInOrder) {
+    allTiles.push(...p.tiles);
+  }
+  validateUniqueTiles(allTiles);
+
+  const dealerHand = evaluateHand(input.dealerTiles);
+  const playerHands: Record<string, EvaluatedHand> = {};
+  const settlements: RoundSettlement[] = [];
+  const ledgerEntries: LedgerEntry[] = [];
+  const playerFinalBalances: Record<string, number> = {};
+
+  let udegRemaining = input.udegLimit;
+  let totalPaid = 0;
+  let totalCollected = 0;
+  let dealerDelta = 0;
+
+  for (const p of input.playersInOrder) {
+    if (!isValidBetAmount(p.bet, p.startingBalance, rules)) {
+      throw new Error('INVALID_BET');
+    }
+
+    const hand = evaluateHand(p.tiles);
+    playerHands[p.playerId] = hand;
+
+    const outcome = compareHands(hand, dealerHand);
+    const udegBefore = udegRemaining;
+
+    if (outcome === 'WIN') {
+      const multiplier = winMultiplier(hand, rules);
+      const claim = p.bet * multiplier;
+
+      if (claim <= udegRemaining) {
+        udegRemaining -= claim;
+        totalPaid += claim;
+        dealerDelta -= claim;
+        playerFinalBalances[p.playerId] = p.startingBalance + claim;
+
+        settlements.push(
+          Object.freeze({
+            roundId: input.roundId,
+            playerId: p.playerId,
+            seatOrder: p.seatOrder,
+            bet: p.bet,
+            outcome: 'WIN',
+            multiplier,
+            claim,
+            paid: claim,
+            loss: 0,
+            balanceDelta: claim,
+            paymentStatus: 'PAID',
+            udegBefore,
+            udegAfter: udegRemaining,
+          })
+        );
+
+        const baseKey = `${input.roundId}:${p.playerId}:PAYOUT`;
+        ledgerEntries.push(
+          Object.freeze({
+            id: `${baseKey}:P`,
+            roundId: input.roundId,
+            participantId: p.playerId,
+            counterpartyId: input.dealerId,
+            signedAmount: claim,
+            kind: 'PAYOUT',
+            settlementKey: `${baseKey}:P`,
+          }),
+          Object.freeze({
+            id: `${baseKey}:D`,
+            roundId: input.roundId,
+            participantId: input.dealerId,
+            counterpartyId: p.playerId,
+            signedAmount: -claim,
+            kind: 'PAYOUT',
+            settlementKey: `${baseKey}:D`,
+          })
+        );
+      } else {
+        // WIN but Udeg insufficient => SKIPPED_UDEG (T12, T25): never converted to LOSE
+        playerFinalBalances[p.playerId] = p.startingBalance;
+
+        settlements.push(
+          Object.freeze({
+            roundId: input.roundId,
+            playerId: p.playerId,
+            seatOrder: p.seatOrder,
+            bet: p.bet,
+            outcome: 'WIN',
+            multiplier,
+            claim,
+            paid: 0,
+            loss: 0,
+            balanceDelta: 0,
+            paymentStatus: 'SKIPPED_UDEG',
+            udegBefore,
+            udegAfter: udegRemaining,
+          })
+        );
+      }
+    } else {
+      // LOSE (including ties; dealer always collects 1x bet even with 9/Triple; A01: does not replenish Udeg)
+      const loss = p.bet * rules.dealerWinMultiplier;
+      totalCollected += loss;
+      dealerDelta += loss;
+      playerFinalBalances[p.playerId] = p.startingBalance - loss;
+
+      settlements.push(
+        Object.freeze({
+          roundId: input.roundId,
+          playerId: p.playerId,
+          seatOrder: p.seatOrder,
+          bet: p.bet,
+          outcome: 'LOSE',
+          multiplier: 1,
+          claim: 0,
+          paid: 0,
+          loss,
+          balanceDelta: -loss,
+          paymentStatus: 'COLLECTED',
+          udegBefore,
+          udegAfter: udegRemaining,
+        })
+      );
+
+      const baseKey = `${input.roundId}:${p.playerId}:COLLECTION`;
+      ledgerEntries.push(
+        Object.freeze({
+          id: `${baseKey}:P`,
+          roundId: input.roundId,
+          participantId: p.playerId,
+          counterpartyId: input.dealerId,
+          signedAmount: -loss,
+          kind: 'COLLECTION',
+          settlementKey: `${baseKey}:P`,
+        }),
+        Object.freeze({
+          id: `${baseKey}:D`,
+          roundId: input.roundId,
+          participantId: input.dealerId,
+          counterpartyId: p.playerId,
+          signedAmount: loss,
+          kind: 'COLLECTION',
+          settlementKey: `${baseKey}:D`,
+        })
+      );
+    }
+  }
+
+  const dealerFinalBalance = input.dealerStartingBalance + dealerDelta;
+
+  const result: SettlementOutput = Object.freeze({
+    roundId: input.roundId,
+    dealerHand,
+    playerHands: Object.freeze(playerHands),
+    settlements: Object.freeze(settlements),
+    ledgerEntries: Object.freeze(ledgerEntries),
+    totalPaid,
+    totalCollected,
+    dealerDelta,
+    dealerFinalBalance,
+    playerFinalBalances: Object.freeze(playerFinalBalances),
+    udegRemaining,
+  });
+
+  verifySettlementInvariants(result, input);
+  return result;
+}
+
+export function verifySettlementInvariants(
+  result: SettlementOutput,
+  input: SettlementInput
+): void {
+  const playerDeltaSum = result.settlements.reduce((s, r) => s + r.balanceDelta, 0);
+  if (playerDeltaSum + result.dealerDelta !== 0) {
+    throw new Error('INVARIANT_ZERO_SUM_VIOLATED');
+  }
+
+  const ledgerSum = result.ledgerEntries.reduce((s, e) => s + e.signedAmount, 0);
+  if (ledgerSum !== 0) {
+    throw new Error('INVARIANT_LEDGER_ZERO_SUM_VIOLATED');
+  }
+
+  if (result.dealerFinalBalance < 0) {
+    throw new Error('INVARIANT_NEGATIVE_DEALER_BALANCE');
+  }
+
+  for (const bal of Object.values(result.playerFinalBalances)) {
+    if (bal < 0) {
+      throw new Error('INVARIANT_NEGATIVE_PLAYER_BALANCE');
+    }
+  }
+
+  if (result.udegRemaining < 0 || result.udegRemaining > input.udegLimit) {
+    throw new Error('INVARIANT_UDEG_RANGE_VIOLATED');
+  }
+
+  if (result.totalPaid > input.udegLimit) {
+    throw new Error('INVARIANT_TOTAL_PAID_EXCEEDS_UDEG');
+  }
+
+  for (const s of result.settlements) {
+    if (s.paid !== 0 && s.paid !== s.claim) {
+      throw new Error('INVARIANT_PARTIAL_PAYOUT_FORBIDDEN');
+    }
+  }
+}
