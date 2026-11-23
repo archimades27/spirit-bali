@@ -546,9 +546,17 @@ export function GameTable({
                 ref={(el) => {
                   seatRefs.current[m.userId] = el;
                 }}
-                className={`opp-seat unit-card ${activeDrawUid === m.userId ? 'is-turn' : ''} ${isOddLast ? 'span-center' : ''} ${resultClass}`}
+                className={`opp-seat unit-card tone-${idx % 5} ${activeDrawUid === m.userId ? 'is-turn' : ''} ${isOddLast ? 'span-center' : ''} ${resultClass}`}
               >
-                <div className="unit-ribbon">
+                <div className="unit-art opp-cards">
+                  {faceUp && rev
+                    ? rev.tiles.map((t, i) => <PaperDomino key={`f-${i}`} tile={t} size="xs" flipIn />)
+                    : Array.from({ length: tileCount }).map((_, i) => (
+                        <PaperDomino key={`b-${i}`} faceDown size="xs" />
+                      ))}
+                </div>
+
+                <div className="unit-ribbon unit-banner">
                   <span className="unit-seat mono">{rp?.seatOrder ?? '-'}</span>
                   <span className="opp-name">{m.displayName}</span>
                   <AnimatedNumber
@@ -559,17 +567,9 @@ export function GameTable({
                   />
                 </div>
 
-                <div className="unit-art opp-cards">
-                  {faceUp && rev
-                    ? rev.tiles.map((t, i) => <PaperDomino key={`f-${i}`} tile={t} size="xs" flipIn />)
-                    : Array.from({ length: tileCount }).map((_, i) => (
-                        <PaperDomino key={`b-${i}`} faceDown size="xs" />
-                      ))}
-                </div>
-
                 {rp && rp.betLocked && (
                   <span
-                    className={`corner-badge cb-tl bet-badge tier-${getBetIntensity(rp.bet, m.balance).level}`}
+                    className={`corner-badge cb-tr bet-badge tier-${getBetIntensity(rp.bet, m.balance).level}`}
                     aria-label={`Toh ${formatShortK(rp.bet)}`}
                   >
                     {formatShortK(rp.bet)}
@@ -586,11 +586,11 @@ export function GameTable({
                 )}
 
                 {settle ? (
-                  <span className={`corner-badge cb-br status-pill ${deltaClass(settle)}`}>
+                  <span className={`corner-badge cb-tl2 status-pill ${deltaClass(settle)}`}>
                     {deltaText(settle, true)}
                   </span>
                 ) : (
-                  <span className={`corner-badge cb-br status-pill ${activeDrawUid === m.userId ? 'is-thinking' : ''}`}>
+                  <span className={`corner-badge cb-tl2 status-pill ${activeDrawUid === m.userId ? 'is-thinking' : ''}`}>
                     {activeDrawUid === m.userId
                       ? 'Pilih…'
                       : rp?.decision === 'STOP'
