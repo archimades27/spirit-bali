@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   evaluateHand,
-  formatHandLabel,
   type EvaluatedHand,
   type RoundSettlement,
   type SafeRoomSnapshot,
@@ -14,7 +13,7 @@ import { SqueezeTile } from '../../components/SqueezeTile';
 import { TimerRing } from '../../components/TimerRing';
 import { WinCelebration, type OutcomeKind } from '../../components/WinCelebration';
 import { feedback, type WinTier } from '../../services/feedback';
-import { formatRupiah, formatShortK, formatSignedRupiah } from '../../services/format';
+import { formatRupiah, formatShortK, formatSignedRupiah, formatSignedShortK } from '../../services/format';
 import { prefersReducedMotion } from '../../services/motion';
 import { useRevealSequence } from './useRevealSequence';
 
@@ -99,7 +98,7 @@ function deltaClass(s: RoundSettlement): string {
 function deltaText(s: RoundSettlement, short = false): string {
   if (s.paymentStatus === 'SKIPPED_UDEG') return short ? 'Menang·Skip' : 'Menang · Udeg Skip';
   if (s.paymentStatus === 'CAPPED_UDEG') return short ? 'Bebas' : 'Kalah · Bebas Udeg';
-  return formatSignedRupiah(s.balanceDelta);
+  return short ? formatSignedShortK(s.balanceDelta) : formatSignedRupiah(s.balanceDelta);
 }
 
 export function GameTable({
@@ -454,78 +453,77 @@ export function GameTable({
 
         {/* Top of Oval: Bandar / Cong */}
         <div className="dealer-top" ref={dealerRef}>
-          <div className="dealer-bar">
-            <span className="badge badge-gold">
-              ★ BANDAR{' '}
-              {snapshot.sessionMode === 'ONE_CYCLE' ? `${currentCyclePos}/${totalCycleSeats} · ` : ''}R
-              {dealerRoundNumber}/{snapshot.rules.dealerRotationRounds}
-            </span>
-            <strong style={{ fontSize: '13px' }}>
-              {dealerMember?.displayName}
-              {isViewerDealer && dealerMember?.displayName.toLowerCase() !== 'anda' ? ' (Anda)' : ''}
-            </strong>
-            <AnimatedNumber
-              className="muted mono dealer-balance"
-              value={shownBalance(dealerId, dealerMember?.balance ?? 0)}
-              format={formatRupiah}
-              showTrend
-            />
-            {showResults && round && round.dealerDelta !== 0 && !isViewerDealer && (
-              <span
-                key={round.roundId}
-                className={`float-delta ${round.dealerDelta > 0 ? 'delta-pos' : 'delta-neg'}`}
-              >
-                {formatSignedRupiah(round.dealerDelta)}
+          <div className="dealer-plate">
+            <div className="plate-side plate-left">
+              <strong className="plate-name">
+                {dealerMember?.displayName}
+                {isViewerDealer && dealerMember?.displayName.toLowerCase() !== 'anda' ? ' (Anda)' : ''}
+              </strong>
+              <span className="plate-sub">
+                ★ BANDAR{' '}
+                {snapshot.sessionMode === 'ONE_CYCLE' ? `${currentCyclePos}/${totalCycleSeats} · ` : ''}R
+                {dealerRoundNumber}/{snapshot.rules.dealerRotationRounds}
               </span>
-            )}
-          </div>
-
-          <div className={`udeg-strip ${showResults && udegRemaining === 0 ? 'is-empty' : ''}`} aria-label="Status Udeg">
-            <span className="muted">Udeg</span>
-            <div className="udeg-mini-bar" aria-hidden="true">
-              <div className="udeg-mini-fill" style={{ width: `${udegPct}%` }} />
             </div>
-            <strong style={{ color: 'var(--gold)' }} className="mono">
-              {udegLimit > 0 ? `${formatShortK(shownUdegRemaining)}/${formatShortK(udegLimit)}` : 'Set...'}
-            </strong>
-          </div>
 
-          <div className="dealer-row">
-          {!isViewerDealer && (
-            <div className={`hand-row dealer-hand ${reveal.running && !reveal.dealerRevealed ? 'is-suspense' : ''}`}>
-              {dealerFaceUp && dealerReveal
-                ? dealerReveal.tiles.map((t, i) => (
-                    <PaperDomino key={`f-${i}`} tile={t} size="xs" flipIn className="dealer-flip" />
-                  ))
-                : Array.from({ length: dealerReveal ? dealerReveal.tiles.length : dealerTileCount }).map(
-                    (_, i) => <PaperDomino key={`b-${i}`} faceDown size="xs" />
-                  )}
-              {dealerFaceUp && dealerReveal && (
-                <span className={`badge badge-gold hv-pop ${handTierClass(dealerReveal.evaluatedHand)}`} style={{ marginLeft: '4px' }}>
-                  {formatHandLabel(dealerReveal.evaluatedHand)}
+            <div
+              className={`plate-gem ${showPot ? 'has-pot' : 'is-empty'}`}
+              ref={potRef}
+              aria-label={`Total toh di meja ${formatRupiah(showPot ? potTotal : 0)}`}
+            >
+              <span className="gem-label">TOH</span>
+              <AnimatedNumber className="mono gem-amount" value={showPot ? potTotal : 0} format={formatShortK} durationMs={500} />
+            </div>
+
+            <div className="plate-side plate-right dealer-bar">
+              <AnimatedNumber
+                className="mono dealer-balance"
+                value={shownBalance(dealerId, dealerMember?.balance ?? 0)}
+                format={formatShortK}
+                showTrend
+              />
+              <span className="plate-sub">Saldo</span>
+              {showResults && round && round.dealerDelta !== 0 && !isViewerDealer && (
+                <span key={round.roundId} className={`float-delta ${round.dealerDelta > 0 ? 'delta-pos' : 'delta-neg'}`}>
+                  {formatSignedShortK(round.dealerDelta)}
                 </span>
               )}
-              {activeDrawUid === dealerId && <span className="badge badge-mint thinking">Giliran</span>}
             </div>
-          )}
-        {showPot && (
-          <div className="table-pot" ref={potRef} aria-label={`Total toh di meja ${formatRupiah(potTotal)}`}>
-            <span className="pot-stack" aria-hidden="true">
-              {Array.from({ length: Math.min(6, Math.ceil(potTotal / 50_000)) }).map((_, i) => (
-                <span key={i} className={`stack-disc ${chipClassFor(potTotal / (i + 1))}`} style={{ bottom: `${i * 3}px` }} />
-              ))}
-            </span>
-            <span className="pot-label">TOH</span>
-            <AnimatedNumber className="mono pot-amount" value={potTotal} format={formatShortK} durationMs={500} />
           </div>
-        )}
-        {!showPot && <div ref={potRef} className="table-pot-anchor" aria-hidden="true" />}
 
+          <div className="dealer-sub">
+            {!isViewerDealer && (
+              <div className={`hand-row dealer-hand ${reveal.running && !reveal.dealerRevealed ? 'is-suspense' : ''}`}>
+                {dealerFaceUp && dealerReveal
+                  ? dealerReveal.tiles.map((t, i) => (
+                      <PaperDomino key={`f-${i}`} tile={t} size="xs" flipIn className="dealer-flip" />
+                    ))
+                  : Array.from({ length: dealerReveal ? dealerReveal.tiles.length : dealerTileCount }).map(
+                      (_, i) => <PaperDomino key={`b-${i}`} faceDown size="xs" />
+                    )}
+                {dealerFaceUp && dealerReveal && (
+                  <span className={`unit-hex is-inline hv-pop ${handTierClass(dealerReveal.evaluatedHand)}`}>
+                    {shortHandLabel(dealerReveal.evaluatedHand)}
+                  </span>
+                )}
+                {activeDrawUid === dealerId && <span className="badge badge-mint thinking">Giliran</span>}
+              </div>
+            )}
+
+            <div className={`udeg-strip ${showResults && udegRemaining === 0 ? 'is-empty' : ''}`} aria-label="Status Udeg">
+              <span className="muted">Udeg</span>
+              <div className="udeg-mini-bar" aria-hidden="true">
+                <div className="udeg-mini-fill" style={{ width: `${udegPct}%` }} />
+              </div>
+              <strong style={{ color: 'var(--gold)' }} className="mono">
+                {udegLimit > 0 ? `${formatShortK(shownUdegRemaining)}/${formatShortK(udegLimit)}` : 'Set...'}
+              </strong>
+            </div>
           </div>
         </div>
 
         {/* Middle of Oval: Clockwise Opponent Seats */}
-        <div className={`opponents-ring ${ringSeats.length === 1 ? 'count-1' : ''}`}>
+        <div className={`opponents-ring count-${ringSeats.length}`}>
           {ringSeats.map((m, idx) => {
             const rp = round?.players[m.userId];
             const rev = round?.reveals[m.userId];
@@ -548,66 +546,66 @@ export function GameTable({
                 ref={(el) => {
                   seatRefs.current[m.userId] = el;
                 }}
-                className={`opp-seat ${activeDrawUid === m.userId ? 'is-turn' : ''} ${isOddLast ? 'span-center' : ''} ${resultClass}`}
+                className={`opp-seat unit-card ${activeDrawUid === m.userId ? 'is-turn' : ''} ${isOddLast ? 'span-center' : ''} ${resultClass}`}
               >
-                <div className="opp-head">
-                  <span className="opp-name">
-                    <span className="mono" style={{ color: 'var(--accent)', marginRight: '4px' }}>
-                      #{rp?.seatOrder ?? '-'}
-                    </span>
-                    {m.displayName}
-                  </span>
-                  {rp && rp.betLocked && (
-                    <span className={`bet-chip mono tier-${getBetIntensity(rp.bet, m.balance).level}`}>
-                      {rp.bet >= 100_000 ? '🔥' : ''}
-                      {formatShortK(rp.bet)}
-                    </span>
-                  )}
+                <div className="unit-ribbon">
+                  <span className="unit-seat mono">{rp?.seatOrder ?? '-'}</span>
+                  <span className="opp-name">{m.displayName}</span>
+                  <AnimatedNumber
+                    className="mono unit-bal"
+                    value={shownBalance(m.userId, m.balance)}
+                    format={formatShortK}
+                    showTrend
+                  />
                 </div>
 
-                <div className="opp-cards">
+                <div className="unit-art opp-cards">
                   {faceUp && rev
                     ? rev.tiles.map((t, i) => <PaperDomino key={`f-${i}`} tile={t} size="xs" flipIn />)
                     : Array.from({ length: tileCount }).map((_, i) => (
                         <PaperDomino key={`b-${i}`} faceDown size="xs" />
                       ))}
-                  {faceUp && rev && (
-                    <span
-                      className={`badge hv-pop ${rev.evaluatedHand.handType !== 'NORMAL' ? 'badge-gold' : 'badge-mint'} ${handTierClass(rev.evaluatedHand)}`}
-                      style={{ marginLeft: 'auto', fontSize: '10px', padding: '2px 6px' }}
-                    >
-                      {shortHandLabel(rev.evaluatedHand)}
-                    </span>
-                  )}
                 </div>
 
-                <div className="opp-foot">
-                  <AnimatedNumber
-                    className="mono"
-                    value={shownBalance(m.userId, m.balance)}
-                    format={formatShortK}
-                    showTrend
-                  />
-                  {settle ? (
-                    <span className={deltaClass(settle)}>{deltaText(settle, true)}</span>
-                  ) : (
-                    <span className={activeDrawUid === m.userId ? 'thinking' : ''}>
-                      {activeDrawUid === m.userId
-                        ? 'Memilih'
-                        : rp?.decision === 'STOP'
-                          ? 'Stop'
-                          : rp?.decision === 'DRAW'
-                            ? '+Kartu 3'
-                            : rp?.betLocked
-                              ? 'Siap'
-                              : 'Bet...'}
-                    </span>
-                  )}
-                </div>
+                {rp && rp.betLocked && (
+                  <span
+                    className={`corner-badge cb-tl bet-badge tier-${getBetIntensity(rp.bet, m.balance).level}`}
+                    aria-label={`Toh ${formatShortK(rp.bet)}`}
+                  >
+                    {formatShortK(rp.bet)}
+                  </span>
+                )}
+
+                {faceUp && rev && (
+                  <span
+                    className={`unit-hex hv-pop ${handTierClass(rev.evaluatedHand)}`}
+                    aria-label={`Nilai ${shortHandLabel(rev.evaluatedHand)}`}
+                  >
+                    {shortHandLabel(rev.evaluatedHand)}
+                  </span>
+                )}
+
+                {settle ? (
+                  <span className={`corner-badge cb-br status-pill ${deltaClass(settle)}`}>
+                    {deltaText(settle, true)}
+                  </span>
+                ) : (
+                  <span className={`corner-badge cb-br status-pill ${activeDrawUid === m.userId ? 'is-thinking' : ''}`}>
+                    {activeDrawUid === m.userId
+                      ? 'Pilih…'
+                      : rp?.decision === 'STOP'
+                        ? 'Stop'
+                        : rp?.decision === 'DRAW'
+                          ? '+3'
+                          : rp?.betLocked
+                            ? 'Siap'
+                            : 'Bet…'}
+                  </span>
+                )}
 
                 {settle && settle.balanceDelta !== 0 && (
                   <span key={round?.roundId} className={`float-delta ${deltaClass(settle)}`}>
-                    {formatSignedRupiah(settle.balanceDelta)}
+                    {formatSignedShortK(settle.balanceDelta)}
                   </span>
                 )}
               </article>
@@ -689,7 +687,7 @@ export function GameTable({
             )}
             {showResults && viewerDelta !== 0 && round && (
               <span key={round.roundId} className={`float-delta ${viewerDelta > 0 ? 'delta-pos' : 'delta-neg'}`}>
-                {formatSignedRupiah(viewerDelta)}
+                {formatSignedShortK(viewerDelta)}
               </span>
             )}
           </span>

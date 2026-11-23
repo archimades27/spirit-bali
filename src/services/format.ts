@@ -19,3 +19,9 @@ export function formatShortK(amount: number): string {
   }
   return `${Math.round(amount / 1000)}rb`;
 }
+
+export function formatSignedShortK(amount: number): string {
+  if (amount > 0) return `+${formatShortK(amount)}`;
+  if (amount < 0) return `−${formatShortK(-amount)}`;
+  return '0';
+}
