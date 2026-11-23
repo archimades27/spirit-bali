@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { feedback } from '../services/feedback';
 import { formatRupiah, formatShortK } from '../services/format';
 import { TimerRing } from './TimerRing';
+import { Flames } from './fx/Flames';
 
 interface BetPanelProps {
   readonly mode: 'BET' | 'UDEG';
@@ -229,6 +230,9 @@ export function BetPanel({
           className={`bet-display ${mode === 'BET' ? `tier-${intensity.level}` : ''} ${isAllIn ? 'is-allin' : ''}`}
           aria-live="polite"
         >
+          {mode === 'BET' && (intensity.level === 'hot' || intensity.level === 'allin') && (
+            <Flames intensity={intensity.level === 'allin' ? 'high' : 'mid'} className="bet-fire" />
+          )}
           {mode === 'BET' && amount > 0 && (
             <span className="chip-stack" aria-hidden="true">
               {chipStack(amount).map((cls, i) => (

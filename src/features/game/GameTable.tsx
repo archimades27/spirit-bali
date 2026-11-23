@@ -7,6 +7,19 @@ import {
 } from '../../domain';
 import { AnimatedNumber } from '../../components/AnimatedNumber';
 import { Avatar } from '../../components/Avatar';
+import { EmoteBubble, EmotePicker } from '../../components/EmotePicker';
+import { CoinBurst } from '../../components/fx/CoinBurst';
+import { Flames } from '../../components/fx/Flames';
+import { Lightning } from '../../components/fx/Lightning';
+import {
+  BOT_REACTIONS,
+  emoteBus,
+  pick,
+  readEmotesMuted,
+  writeEmotesMuted,
+  type EmoteEvent,
+  type EmoteId,
+} from '../../services/emotes';
 import { BetPanel, getBetIntensity } from '../../components/BetPanel';
 import { LeaderboardOverlay } from '../../components/LeaderboardOverlay';
 import { PaperDomino } from '../../components/PaperDomino';
@@ -29,7 +42,12 @@ interface GameTableProps {
   readonly onNextRound: () => void;
   readonly onOpenLedger: () => void;
   readonly onExitLobby: () => void;
+  /** True when this client runs the bots (offline, or online host) and may send bot taunts. */
+  readonly drivesBots?: boolean;
+  readonly onSendEmote?: (fromId: string, emoteId: EmoteId) => void;
 }
+
+const SPECIAL_HV = new Set(['hv-nine', 'hv-besar', 'hv-triple', 'hv-six66']);
 
 interface FlyingChip {
   readonly id: number;
@@ -113,6 +131,8 @@ export function GameTable({
   onNextRound,
   onOpenLedger,
   onExitLobby,
+  drivesBots = false,
+  onSendEmote,
 }: GameTableProps) {
   const round = snapshot.currentRound;
   const dealerId = round?.dealerId ?? snapshot.dealerId;
@@ -394,6 +414,132 @@ export function GameTable({
     });
   }, [showResults, round, dealerId, elFor, launch]);
 
+  // ---- Taunt emotes ----
+  const [emotesMuted, setEmotesMuted] = useState(readEmotesMuted);
+  const [bubbles, setBubbles] = useState<Readonly<Record<string, EmoteEvent>>>({});
+  const sendRef = useRef(onSendEmote);
+  sendRef.current = onSendEmote;
+  const membersRef = useRef(snapshot.members);
+  membersRef.current = snapshot.members;
+  const botTimers = useRef<number[]>([]);
+
+  const botSay = useCallback(
+    (botId: string, emoteId: EmoteId, delayMs: number) => {
+      const t = window.setTimeout(() => sendRef.current?.(botId, emoteId), delayMs);
+      botTimers.current.push(t);
+    },
+    []
+  );
+
+  useEffect(
+    () => () => {
+      botTimers.current.forEach((t) => window.clearTimeout(t));
+      botTimers.current = [];
+    },
+    []
+  );
+
+  useEffect(
+    () =>
+      emoteBus.subscribe((e) => {
+        if (e.fromId !== viewerId && emotesMuted) return;
+        setBubbles((b) => ({ ...b, [e.fromId]: e }));
+        feedback.emote();
+        window.setTimeout(() => {
+          setBubbles((b) => {
+            if (b[e.fromId]?.key !== e.key) return b;
+            const next = { ...b };
+            delete next[e.fromId];
+            return next;
+          });
+        }, 2700);
+
+        // A bot sometimes answers the viewer's taunt.
+        if (drivesBots && e.fromId === viewerId && Math.random() < 0.45) {
+          const bots = membersRef.current.filter((m) => m.isBot && m.status !== 'LEFT');
+          if (bots.length > 0) botSay(pick(bots).userId, pick(BOT_REACTIONS.reply), 900 + Math.random() * 900);
+        }
+      }),
+    [viewerId, emotesMuted, drivesBots, botSay]
+  );
+
+  function sendMyEmote(id: EmoteId) {
+    onSendEmote?.(viewerId, id);
+  }
+
+  // Bots react to the round result.
+  const reactedRound = useRef<string | null>(null);
+  useEffect(() => {
+    if (!drivesBots || !showResults || !round || reactedRound.current === round.roundId) return;
+    reactedRound.current = round.roundId;
+    const reactions: { id: string; mood: 'win' | 'lose' }[] = [];
+    for (const m of snapshot.members) {
+      if (!m.isBot || m.status === 'LEFT') continue;
+      if (m.userId === dealerId) {
+        if (round.dealerDelta > 0) reactions.push({ id: m.userId, mood: 'win' });
+        else if (round.dealerDelta < 0) reactions.push({ id: m.userId, mood: 'lose' });
+      } else {
+        const st = round.settlements.find((x) => x.playerId === m.userId)?.paymentStatus;
+        if (st === 'PAID') reactions.push({ id: m.userId, mood: 'win' });
+        else if (st === 'COLLECTED') reactions.push({ id: m.userId, mood: 'lose' });
+      }
+    }
+    reactions
+      .sort(() => Math.random() - 0.5)
+      .filter(() => Math.random() < 0.6)
+      .slice(0, 2)
+      .forEach((r, i) => botSay(r.id, pick(BOT_REACTIONS[r.mood]), 1100 + i * 1300 + Math.random() * 400));
+  }, [drivesBots, showResults, round, snapshot.members, dealerId, botSay]);
+
+  // Bots brag about big bets; pot fire sound once it gets hot.
+  const bigBetSeen = useRef<{ roundId: string | null; ids: Set<string> }>({ roundId: null, ids: new Set() });
+  const potFireRound = useRef<string | null>(null);
+  useEffect(() => {
+    if (!round) return;
+    if (bigBetSeen.current.roundId !== round.roundId) bigBetSeen.current = { roundId: round.roundId, ids: new Set() };
+    for (const m of snapshot.members) {
+      const rp = round.players[m.userId];
+      if (!rp || rp.isDealer || !rp.betLocked || bigBetSeen.current.ids.has(m.userId)) continue;
+      const lvl = getBetIntensity(rp.bet, m.balance).level;
+      if (lvl !== 'hot' && lvl !== 'allin') continue;
+      bigBetSeen.current.ids.add(m.userId);
+      if (drivesBots && m.isBot && Math.random() < 0.5) botSay(m.userId, pick(BOT_REACTIONS.bigBet), 500);
+    }
+    if (potTotal >= 300_000 && potFireRound.current !== round.roundId && !isSettledPhase) {
+      potFireRound.current = round.roundId;
+      feedback.fire();
+    }
+  }, [round, snapshot.members, drivesBots, botSay, potTotal, isSettledPhase]);
+
+  // ---- Thunder on dealer reveal and on special hands ----
+  const thunderSeen = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!round || !isSettledPhase) return;
+    const fire = (key: string) => {
+      if (thunderSeen.current.has(key)) return;
+      thunderSeen.current.add(key);
+      feedback.thunder();
+    };
+    if (reveal.dealerRevealed) fire(`${round.roundId}:dealer`);
+    for (const uid of Object.keys(round.reveals)) {
+      if (uid === dealerId || !reveal.isSeatRevealed(uid)) continue;
+      const hand = round.reveals[uid]?.evaluatedHand;
+      if (hand && SPECIAL_HV.has(handTierClass(hand))) fire(`${round.roundId}:${uid}`);
+    }
+  });
+
+  // ---- Coin jackpot sound ----
+  const coinRound = useRef<string | null>(null);
+  const bigWin = Boolean(showBanner && banner?.kind === 'win');
+  useEffect(() => {
+    if (!bigWin || !round || coinRound.current === round.roundId) return;
+    coinRound.current = round.roundId;
+    const t = bannerTier;
+    window.setTimeout(() => feedback.coins(t === 'six66' || t === 'triple' ? 16 : 9), 250);
+  }, [bigWin, round, bannerTier]);
+
+  const jackpot = Boolean(showBanner && banner?.kind === 'win' && (banner.tier === 'six66' || banner.tier === 'triple'));
+
   const totalCycleSeats = snapshot.members.filter((m) => m.status !== 'LEFT').length;
   const currentCyclePos = Math.min(totalCycleSeats, snapshot.dealersServed.length + 1);
   const timeouts = snapshot.rules.timeoutsSec;
@@ -446,6 +592,24 @@ export function GameTable({
           />
         )}
 
+        {isSettledPhase && reveal.dealerRevealed && round && (
+          <Lightning
+            key={`dl-${round.roundId}`}
+            seed={`${round.roundId}-dealer`}
+            scope="screen"
+            color={
+              dealerReveal && SPECIAL_HV.has(handTierClass(dealerReveal.evaluatedHand)) ? '#ffe08a' : '#bfe9ff'
+            }
+          />
+        )}
+
+        {jackpot && round && (
+          <>
+            <CoinBurst key={`rain-${round.roundId}`} seed={`rain-${round.roundId}`} mode="rain" count={36} />
+            <Flames intensity="high" className="table-fire" />
+          </>
+        )}
+
         {reveal.running && (
           <div className="reveal-caption" role="status">
             {reveal.dealerRevealed ? 'Hitung hasil...' : 'Buka kartu...'}
@@ -456,6 +620,7 @@ export function GameTable({
         <div className="dealer-top" ref={dealerRef}>
           <div className={`dealer-card ${activeDrawUid === dealerId ? 'is-turn' : ''}`}>
             <Avatar name={dealerMember?.displayName ?? 'Bandar'} size="md" crown />
+            {!isViewerDealer && <EmoteBubble event={bubbles[dealerId]} placement="down" />}
             <div className="who">
               <strong className="who-name">
                 {dealerMember?.displayName}
@@ -517,6 +682,9 @@ export function GameTable({
               ref={potRef}
               aria-label={`Total toh di meja ${formatRupiah(showPot ? potTotal : 0)}`}
             >
+              {showPot && potTotal >= 300_000 && (
+                <Flames intensity={potTotal >= 600_000 ? 'high' : 'mid'} className="pot-fire" />
+              )}
               <span className="pot-orb-label">POT</span>
               <AnimatedNumber
                 className="mono pot-orb-amount"
@@ -544,6 +712,8 @@ export function GameTable({
                   ? 'is-loser'
                   : 'is-neutral'
               : '';
+            const heatLevel = rp && rp.betLocked ? getBetIntensity(rp.bet, m.balance).level : 'low';
+            const betHeat = heatLevel === 'allin' ? 'allin' : heatLevel === 'hot' ? 'hot' : 'none';
             const statusText = isTurn
               ? 'Memilih'
               : rp?.decision === 'STOP'
@@ -563,6 +733,20 @@ export function GameTable({
                 className={`pod ${isTurn ? 'is-turn' : ''} ${resultClass}`}
                 aria-label={`Kursi ${m.displayName}`}
               >
+                {rp && rp.betLocked && !settle && betHeat !== 'none' && (
+                  <Flames intensity={betHeat === 'allin' ? 'high' : 'mid'} className="pod-fire" />
+                )}
+                {faceUp && rev && SPECIAL_HV.has(handTierClass(rev.evaluatedHand)) && round && (
+                  <Lightning
+                    key={`l-${round.roundId}`}
+                    seed={`${round.roundId}-${m.userId}`}
+                    color={handTierClass(rev.evaluatedHand) === 'hv-six66' ? '#ff9aa8' : '#ffe08a'}
+                  />
+                )}
+                {settle?.paymentStatus === 'PAID' && round && (
+                  <CoinBurst key={`c-${round.roundId}`} seed={`${round.roundId}-${m.userId}`} count={7} />
+                )}
+                <EmoteBubble event={bubbles[m.userId]} />
                 <div className="pod-head">
                   <span className="pod-avatar">
                     <Avatar name={m.displayName} size="sm" />
@@ -670,6 +854,9 @@ export function GameTable({
         className={`hand-zone ${showBanner && banner?.kind === 'win' ? 'is-win-glow' : ''} ${showResults && banner?.kind === 'lose' ? 'is-lose-dim' : ''}`}
         aria-label="Kartu tangan Anda"
       >
+        {bigWin && round && (
+          <CoinBurst key={`me-${round.roundId}`} seed={`me-${round.roundId}`} count={jackpot ? 28 : 14} />
+        )}
         <div className="hand-zone-head">
           <span className="me">
             <Avatar name={viewerMember?.displayName ?? 'Anda'} size="sm" crown={isViewerDealer} />
@@ -677,6 +864,19 @@ export function GameTable({
               <strong className="me-name">{viewerMember?.displayName ?? 'Anda'}</strong>
               <span className="me-role">{isViewerDealer ? 'Bandar' : `Kursi #${viewerRoundPlayer?.seatOrder ?? '-'}`}</span>
             </span>
+            <EmoteBubble event={bubbles[viewerId]} />
+            {onSendEmote && (
+              <EmotePicker
+                muted={emotesMuted}
+                onToggleMute={() =>
+                  setEmotesMuted((v) => {
+                    writeEmotesMuted(!v);
+                    return !v;
+                  })
+                }
+                onSend={sendMyEmote}
+              />
+            )}
           </span>
           <span className="hand-balance">
             {viewerRoundPlayer && !isViewerDealer && viewerRoundPlayer.betLocked && (

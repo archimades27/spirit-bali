@@ -1,4 +1,5 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { emoteBus, isEmoteId, type EmoteId } from './emotes';
 import {
   createInitialRoom,
   evaluateHand,
@@ -107,6 +108,14 @@ export class OnlineRoomSession {
 
     channel.on('broadcast', { event: 'spirit' }, ({ payload }) => {
       this.handleMessage(payload as BroadcastEnvelope);
+    });
+
+    channel.on('broadcast', { event: 'emote' }, ({ payload }) => {
+      const p = payload as { fromId?: unknown; emoteId?: unknown } | null;
+      if (!p || typeof p.fromId !== 'string' || !isEmoteId(p.emoteId)) return;
+      const known = this.latestSnapshot?.members.some((m) => m.userId === p.fromId && m.status !== 'LEFT');
+      if (!known) return;
+      emoteBus.emit(p.fromId, p.emoteId);
     });
 
     channel.subscribe((status) => {
@@ -408,6 +417,13 @@ export class OnlineRoomSession {
         snapshot: projectSafeSnapshot(this.hostState, m.userId),
       });
     }
+  }
+
+  /** Show an emote locally and broadcast it to everyone else in the room. */
+  public sendEmote(fromId: string, emoteId: EmoteId): void {
+    emoteBus.emit(fromId, emoteId);
+    if (!this.channel) return;
+    void this.channel.send({ type: 'broadcast', event: 'emote', payload: { fromId, emoteId } });
   }
 
   private send(envelope: BroadcastEnvelope): void {

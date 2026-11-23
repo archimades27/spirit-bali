@@ -155,6 +155,26 @@ export const feedback = {
     tone(440, 0, 0.12, { type: 'sine', gain: 0.07 });
     tone(554, 0.1, 0.18, { type: 'sine', gain: 0.07 });
   },
+  thunder(): void {
+    noise(0, 0.08, 0.16, 900);
+    noise(0.06, 0.5, 0.12, 120);
+    tone(70, 0.02, 0.6, { type: 'sawtooth', gain: 0.05, slideTo: 40 });
+    vibrate([30, 30, 60]);
+  },
+  fire(): void {
+    for (let i = 0; i < 5; i += 1) noise(i * 0.06, 0.12, 0.05, 600 + i * 300);
+    tone(140, 0, 0.35, { type: 'sawtooth', gain: 0.03, slideTo: 260 });
+  },
+  coins(count = 8): void {
+    for (let i = 0; i < count; i += 1) {
+      tone(1800 + ((i * 377) % 900), i * 0.055, 0.09, { type: 'triangle', gain: 0.045 });
+    }
+    vibrate([10, 30, 10, 30, 10]);
+  },
+  emote(): void {
+    tone(660, 0, 0.08, { type: 'sine', gain: 0.06, slideTo: 990 });
+    vibrate(10);
+  },
   tick(): void {
     tone(1200, 0, 0.04, { type: 'square', gain: 0.03 });
     vibrate(6);

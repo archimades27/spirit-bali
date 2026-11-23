@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { emoteBus } from '../services/emotes';
 import type { GamePhase, SafeRoomSnapshot } from '../domain';
 import { LedgerModal } from '../components/LedgerModal';
 import { RulesModal } from '../components/RulesModal';
@@ -309,6 +310,11 @@ export function App() {
             onNextRound={handleNextRound}
             onOpenLedger={() => setLedgerOpen(true)}
             onExitLobby={cleanupSessions}
+            drivesBots={mode === 'local' || Boolean(onlineRef.current?.isHost)}
+            onSendEmote={(fromId, emoteId) => {
+              if (mode === 'online' && onlineRef.current) onlineRef.current.sendEmote(fromId, emoteId);
+              else emoteBus.emit(fromId, emoteId);
+            }}
           />
         ) : (
           <HomeLobby
