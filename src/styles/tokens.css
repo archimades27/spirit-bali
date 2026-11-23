@@ -1,20 +1,20 @@
 :root {
   color-scheme: only dark;
 
-  --bg: #0c1017;
-  --panel: #131b27;
-  --soft: #1a2534;
-  --line: #2a384b;
-  --text: #e7edf6;
-  --muted: #adbbce;
-  --accent: #65e0c2;
-  --accent-ink: #08241d;
-  --gold: #f3c76c;
+  --bg: #0b0a1a;
+  --panel: #15142b;
+  --soft: #1f1d3d;
+  --line: rgba(255, 255, 255, 0.1);
+  --text: #f5f3ff;
+  --muted: #a6a3c9;
+  --accent: #3ee8b0;
+  --accent-ink: #032a1e;
+  --gold: #ffc94d;
   --gold-ink: #2a1e06;
-  --red: #f07f8d;
-  --red-bg: #3b1c24;
-  --mint-bg: #14332d;
-  --gold-bg: #362b16;
+  --red: #ff5c7a;
+  --red-bg: rgba(255, 92, 122, 0.14);
+  --mint-bg: rgba(62, 232, 176, 0.12);
+  --gold-bg: rgba(255, 201, 77, 0.13);
 
   --paper-front: #f7da47;
   --paper-front-hi: #fce568;
@@ -27,14 +27,14 @@
   --paper-back-dot: #f7da47;
   --paper-back-border: #fff4c4;
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
   --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.35);
   --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.38);
 
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Outfit", system-ui, -apple-system, sans-serif;
 
   accent-color: var(--accent);
 }

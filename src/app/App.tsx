@@ -238,7 +238,8 @@ export function App() {
         <header className="hud-bar">
           <div className="hud-left">
             <div className="brand-mini">
-              SPIRIT<span>/BALI</span>
+              <span className="brand-mark" aria-hidden="true" />
+              Spirit<span>Bali</span>
             </div>
             {inActiveTable && snapshot && (
               <>
@@ -246,8 +247,8 @@ export function App() {
                   R#{snapshot.roundSequence} · {PHASE_SHORT[snapshot.phase]}
                 </span>
                 {secondsLeft !== null && (
-                  <span className={`badge ${secondsLeft <= 10 ? 'badge-red' : ''}`}>
-                    {secondsLeft}d
+                  <span className={`badge hud-timer ${secondsLeft <= 10 ? 'badge-red' : ''}`}>
+                    {secondsLeft}s
                   </span>
                 )}
               </>
@@ -268,7 +269,11 @@ export function App() {
                 onClick={() => setLedgerOpen(true)}
                 aria-label="Buka ledger dan riwayat"
               >
-                Riwayat
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 3-6.7" />
+                  <path d="M3 4v5h5" />
+                  <path d="M12 7v5l3 2" />
+                </svg>
               </button>
             )}
             <button
