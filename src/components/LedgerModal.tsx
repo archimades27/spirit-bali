@@ -135,6 +135,7 @@ export function LedgerModal({ open, snapshot, onClose }: LedgerModalProps) {
             <div style={{ display: 'grid', gap: '8px' }}>
               {snapshot.roundHistory.map((h) => {
                 const skips = h.settlements.filter((s) => s.paymentStatus === 'SKIPPED_UDEG').length;
+                const capped = h.settlements.filter((s) => s.paymentStatus === 'CAPPED_UDEG').length;
                 return (
                   <div
                     key={h.roundId}
@@ -157,6 +158,7 @@ export function LedgerModal({ open, snapshot, onClose }: LedgerModalProps) {
                     <div className="muted">
                       Udeg sisa {formatRupiah(h.udegRemaining)} / {formatRupiah(h.udegLimit)}
                       {skips > 0 ? ` · ${skips} skip` : ''}
+                      {capped > 0 ? ` · ${capped} bebas Udeg` : ''}
                     </div>
                   </div>
                 );

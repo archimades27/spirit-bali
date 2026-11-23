@@ -69,6 +69,14 @@ export function isValidUdegAmount(
   );
 }
 
+function payoutTier(hand: EvaluatedHand): 0 | 1 | 2 | 3 | 4 {
+  if (hand.handType === 'SIX_SIX_SIX') return 0;
+  if (hand.handType === 'TRIPLE') return 1;
+  if (hand.handType === 'BESAR') return 2;
+  if (hand.numericScore === 9) return 3;
+  return 4;
+}
+
 export function settleRound(input: SettlementInput): SettlementOutput {
   const rules = input.rules ?? RULES_V1_0;
 
@@ -89,63 +97,20 @@ export function settleRound(input: SettlementInput): SettlementOutput {
   const ledgerEntries: LedgerEntry[] = [];
   const playerFinalBalances: Record<string, number> = {};
 
-  // Pass 1: Evaluate all hands and collect ayahan (losses/ties) into the Bandar's payout pool first.
-  let totalCollected = 0;
-  let dealerDelta = 0;
-
   for (const p of input.playersInOrder) {
     if (!isValidBetAmount(p.bet, p.startingBalance, rules)) {
       throw new Error('INVALID_BET');
     }
     const hand = evaluateHand(p.tiles);
     playerHands[p.playerId] = hand;
-    const outcome = compareHands(hand, dealerHand);
-    outcomes[p.playerId] = outcome;
-
-    if (outcome === 'LOSE') {
-      const loss = p.bet * rules.dealerWinMultiplier;
-      totalCollected += loss;
-      dealerDelta += loss;
-      playerFinalBalances[p.playerId] = p.startingBalance - loss;
-
-      const baseKey = `${input.roundId}:${p.playerId}:COLLECTION`;
-      ledgerEntries.push(
-        Object.freeze({
-          id: `${baseKey}:P`,
-          roundId: input.roundId,
-          participantId: p.playerId,
-          counterpartyId: input.dealerId,
-          signedAmount: -loss,
-          kind: 'COLLECTION',
-          settlementKey: `${baseKey}:P`,
-        }),
-        Object.freeze({
-          id: `${baseKey}:D`,
-          roundId: input.roundId,
-          participantId: input.dealerId,
-          counterpartyId: p.playerId,
-          signedAmount: loss,
-          kind: 'COLLECTION',
-          settlementKey: `${baseKey}:D`,
-        })
-      );
-    }
+    outcomes[p.playerId] = compareHands(hand, dealerHand);
   }
 
-function payoutTier(hand: EvaluatedHand): 0 | 1 | 2 | 3 | 4 {
-  if (hand.handType === 'SIX_SIX_SIX') return 0;
-  if (hand.handType === 'TRIPLE') return 1;
-  if (hand.handType === 'BESAR') return 2;
-  if (hand.numericScore === 9) return 3;
-  return 4;
-}
+  const losers = input.playersInOrder.filter((p) => outcomes[p.playerId] === 'LOSE');
+  const lossOf = (p: SettlementPlayerInput) => p.bet * rules.dealerWinMultiplier;
 
-  // Pass 2: Pay winners in priority order (Triple -> Nilai 9 -> Normal, tie-broken by clockwise seatOrder)
-  // from (udegLimit + totalCollected ayahan).
-  let udegRemaining = input.udegLimit + totalCollected;
-  let totalPaid = 0;
-  const settlementByPlayer: Record<string, RoundSettlement> = {};
-
+  // Winners are paid in priority order (666 -> Triple -> Besar -> Nilai 9 -> Normal,
+  // tie-broken by clockwise seatOrder) from (udegLimit + collected ayahan).
   const winnersInPriority = input.playersInOrder
     .filter((p) => outcomes[p.playerId] === 'WIN')
     .sort((a, b) => {
@@ -154,13 +119,90 @@ function payoutTier(hand: EvaluatedHand): 0 | 1 | 2 | 3 | 4 {
       return tierDiff !== 0 ? tierDiff : a.seatOrder - b.seatOrder;
     });
 
+  const planPayouts = (pool: number): { readonly paid: ReadonlySet<string>; readonly total: number } => {
+    const paid = new Set<string>();
+    let remaining = pool;
+    let total = 0;
+    for (const p of winnersInPriority) {
+      const claim = p.bet * winMultiplier(playerHands[p.playerId]!, rules);
+      if (claim <= remaining) {
+        remaining -= claim;
+        total += claim;
+        paid.add(p.playerId);
+      }
+    }
+    return { paid, total };
+  };
+
+  // A10: Bandar net profit per round is capped at udegLimit. Losers are charged clockwise;
+  // a loser whose full ayahan no longer fits under (udegLimit + payouts) pays nothing
+  // (CAPPED_UDEG, never partial). The charged set only shrinks, so this converges in <= n passes.
+  let charged = new Set(losers.map((p) => p.playerId));
+  let plan = planPayouts(input.udegLimit);
+  for (;;) {
+    const collected = losers
+      .filter((p) => charged.has(p.playerId))
+      .reduce((sum, p) => sum + lossOf(p), 0);
+    plan = planPayouts(input.udegLimit + collected);
+    const allowedCollection = input.udegLimit + plan.total;
+    const next = new Set<string>();
+    let acc = 0;
+    for (const p of losers) {
+      if (!charged.has(p.playerId)) continue;
+      if (acc + lossOf(p) <= allowedCollection) {
+        acc += lossOf(p);
+        next.add(p.playerId);
+      }
+    }
+    if (next.size === charged.size) break;
+    charged = next;
+  }
+
+  // Pass 1: collect ayahan from charged losers into the Bandar's payout pool.
+  let totalCollected = 0;
+  let dealerDelta = 0;
+  for (const p of losers) {
+    if (!charged.has(p.playerId)) continue;
+    const loss = lossOf(p);
+    totalCollected += loss;
+    dealerDelta += loss;
+    playerFinalBalances[p.playerId] = p.startingBalance - loss;
+
+    const baseKey = `${input.roundId}:${p.playerId}:COLLECTION`;
+    ledgerEntries.push(
+      Object.freeze({
+        id: `${baseKey}:P`,
+        roundId: input.roundId,
+        participantId: p.playerId,
+        counterpartyId: input.dealerId,
+        signedAmount: -loss,
+        kind: 'COLLECTION',
+        settlementKey: `${baseKey}:P`,
+      }),
+      Object.freeze({
+        id: `${baseKey}:D`,
+        roundId: input.roundId,
+        participantId: input.dealerId,
+        counterpartyId: p.playerId,
+        signedAmount: loss,
+        kind: 'COLLECTION',
+        settlementKey: `${baseKey}:D`,
+      })
+    );
+  }
+
+  // Pass 2: pay winners following the converged plan.
+  let udegRemaining = input.udegLimit + totalCollected;
+  let totalPaid = 0;
+  const settlementByPlayer: Record<string, RoundSettlement> = {};
+
   for (const p of winnersInPriority) {
     const hand = playerHands[p.playerId]!;
     const udegBefore = udegRemaining;
     const multiplier = winMultiplier(hand, rules);
     const claim = p.bet * multiplier;
 
-    if (claim <= udegRemaining) {
+    if (plan.paid.has(p.playerId)) {
       udegRemaining -= claim;
       totalPaid += claim;
       dealerDelta -= claim;
@@ -225,25 +267,27 @@ function payoutTier(hand: EvaluatedHand): 0 | 1 | 2 | 3 | 4 {
     }
   }
 
-  for (const p of input.playersInOrder) {
-    if (outcomes[p.playerId] === 'LOSE') {
-      const loss = p.bet * rules.dealerWinMultiplier;
-      settlementByPlayer[p.playerId] = Object.freeze({
-        roundId: input.roundId,
-        playerId: p.playerId,
-        seatOrder: p.seatOrder,
-        bet: p.bet,
-        outcome: 'LOSE',
-        multiplier: 1,
-        claim: 0,
-        paid: 0,
-        loss,
-        balanceDelta: -loss,
-        paymentStatus: 'COLLECTED',
-        udegBefore: udegRemaining,
-        udegAfter: udegRemaining,
-      });
+  for (const p of losers) {
+    const isCharged = charged.has(p.playerId);
+    const loss = isCharged ? lossOf(p) : 0;
+    if (!isCharged) {
+      playerFinalBalances[p.playerId] = p.startingBalance;
     }
+    settlementByPlayer[p.playerId] = Object.freeze({
+      roundId: input.roundId,
+      playerId: p.playerId,
+      seatOrder: p.seatOrder,
+      bet: p.bet,
+      outcome: 'LOSE',
+      multiplier: 1,
+      claim: 0,
+      paid: 0,
+      loss,
+      balanceDelta: isCharged ? -loss : 0,
+      paymentStatus: isCharged ? 'COLLECTED' : 'CAPPED_UDEG',
+      udegBefore: udegRemaining,
+      udegAfter: udegRemaining,
+    });
   }
 
   const settlements: RoundSettlement[] = input.playersInOrder.map(
@@ -297,6 +341,14 @@ export function verifySettlementInvariants(
   const maxPayoutPool = input.udegLimit + result.totalCollected;
   if (result.udegRemaining < 0 || result.udegRemaining > maxPayoutPool) {
     throw new Error('INVARIANT_UDEG_RANGE_VIOLATED');
+  }
+
+  if (result.dealerDelta > input.udegLimit) {
+    throw new Error('INVARIANT_DEALER_PROFIT_EXCEEDS_UDEG');
+  }
+
+  if (result.dealerDelta < -input.udegLimit) {
+    throw new Error('INVARIANT_DEALER_LOSS_EXCEEDS_UDEG');
   }
 
   if (result.totalPaid > maxPayoutPool) {

@@ -14,6 +14,9 @@ interface PaperDominoProps {
   readonly tile?: Tile;
   readonly faceDown?: boolean;
   readonly size?: 'md' | 'sm' | 'xs';
+  /** Play a flip-in animation when the face is shown (use a new React key per flip). */
+  readonly flipIn?: boolean;
+  readonly className?: string;
 }
 
 function DominoHalf({ value }: { readonly value: number }) {
@@ -34,8 +37,14 @@ function DominoHalf({ value }: { readonly value: number }) {
   );
 }
 
-export function PaperDomino({ tile, faceDown = false, size = 'md' }: PaperDominoProps) {
-  const sizeClass = size === 'sm' ? 'size-sm' : size === 'xs' ? 'size-xs' : '';
+export function PaperDomino({
+  tile,
+  faceDown = false,
+  size = 'md',
+  flipIn = false,
+  className = '',
+}: PaperDominoProps) {
+  const sizeClass = `${size === 'sm' ? 'size-sm' : size === 'xs' ? 'size-xs' : ''} ${className}`;
 
   if (faceDown || !tile) {
     return (
@@ -49,7 +58,7 @@ export function PaperDomino({ tile, faceDown = false, size = 'md' }: PaperDomino
 
   return (
     <div
-      className={`paper-domino ${sizeClass}`}
+      className={`paper-domino ${sizeClass} ${flipIn ? 'flip-in' : ''}`}
       role="img"
       aria-label={`Kartu domino ${tile[0]} | ${tile[1]}`}
     >

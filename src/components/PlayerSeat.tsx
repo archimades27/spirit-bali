@@ -95,6 +95,8 @@ export function PlayerSeat({
             className={
               settlement.paymentStatus === 'SKIPPED_UDEG'
                 ? 'delta-skip'
+                : settlement.paymentStatus === 'CAPPED_UDEG'
+                ? 'delta-capped'
                 : settlement.balanceDelta >= 0
                   ? 'delta-pos'
                   : 'delta-neg'
@@ -102,6 +104,8 @@ export function PlayerSeat({
           >
             {settlement.paymentStatus === 'SKIPPED_UDEG'
               ? 'Menang · Udeg Skip'
+              : settlement.paymentStatus === 'CAPPED_UDEG'
+              ? 'Kalah · Bebas Udeg'
               : formatSignedRupiah(settlement.balanceDelta)}
           </span>
         )}

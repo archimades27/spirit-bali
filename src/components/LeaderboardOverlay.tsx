@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import type { SafeRoomSnapshot } from '../domain';
 import { formatRupiah, formatSignedRupiah } from '../services/format';
+import { AnimatedNumber } from './AnimatedNumber';
 
 interface LeaderboardOverlayProps {
   readonly snapshot: SafeRoomSnapshot;
@@ -52,6 +54,7 @@ export function LeaderboardOverlay({
               <li
                 key={m.userId}
                 className={`leaderboard-row ${idx === 0 ? 'is-champion' : ''} ${isYou ? 'is-you' : ''}`}
+                style={{ animationDelay: `${200 + (ranked.length - 1 - idx) * 180}ms` }}
               >
                 <span className="lb-rank">{MEDALS[idx] ?? `#${idx + 1}`}</span>
                 <div className="lb-name">
@@ -64,7 +67,7 @@ export function LeaderboardOverlay({
                   </span>
                 </div>
                 <div className="lb-score">
-                  <strong className="mono">{formatRupiah(m.balance)}</strong>
+                  <LeaderboardBalance start={startingBalance} value={m.balance} />
                   <span className={`mono ${net > 0 ? 'delta-pos' : net < 0 ? 'delta-neg' : 'muted'}`} style={{ fontSize: '11px' }}>
                     {net === 0 ? 'Impas' : formatSignedRupiah(net)}
                   </span>
@@ -85,4 +88,14 @@ export function LeaderboardOverlay({
       </div>
     </div>
   );
+}
+
+function LeaderboardBalance({ start, value }: { readonly start: number; readonly value: number }) {
+  // Count up from the starting balance once the overlay mounts.
+  const [shown, setShown] = useState(start);
+  useEffect(() => {
+    const t = window.setTimeout(() => setShown(value), 350);
+    return () => window.clearTimeout(t);
+  }, [value]);
+  return <AnimatedNumber className="mono lb-balance" value={shown} format={formatRupiah} durationMs={1400} />;
 }

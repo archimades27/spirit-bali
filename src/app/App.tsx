@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GamePhase, SafeRoomSnapshot } from '../domain';
 import { LedgerModal } from '../components/LedgerModal';
 import { RulesModal } from '../components/RulesModal';
+import { SoundToggle } from '../components/SoundToggle';
 import { GameTable } from '../features/game/GameTable';
 import { HomeLobby } from '../features/room/HomeLobby';
 import { LocalGameSession, type LocalGameConfig } from '../services/localGameEngine';
@@ -259,6 +260,7 @@ export function App() {
           </div>
 
           <div className="hud-actions">
+            <SoundToggle />
             {inActiveTable && (
               <button
                 type="button"
@@ -294,6 +296,7 @@ export function App() {
           <GameTable
             snapshot={snapshot}
             viewerId={viewerId}
+            secondsLeft={secondsLeft}
             onSetUdeg={handleSetUdeg}
             onPlaceBet={handlePlaceBet}
             onStop={handleStop}

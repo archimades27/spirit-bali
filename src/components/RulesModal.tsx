@@ -88,12 +88,13 @@ export function RulesModal({ open, onClose }: RulesModalProps) {
             <li><strong>Seri:</strong> Peringkat sama (termasuk 666 vs 666, Triple vs Triple, Besar vs Besar) selalu dimenangkan bandar.</li>
             <li><strong>Bandar menang:</strong> Meski dengan kombinasi khusus, bandar tetap menerima hanya 1× bet.</li>
             <li><strong>Udeg, Ayahan & Prioritas Bayar:</strong> Kekalahan/seri pemain (<em>ayahan</em> bandar) dikumpulkan lebih dulu menambah kolam bayar (<code>Udeg + Ayahan</code>). Pembayaran pemenang diutamakan dari <strong>666 → Triple → Besar → Nilai 9 → Lainnya</strong> (searah jarum jam jika setingkat).</li>
+            <li><strong>Batas Untung Bandar = Udeg:</strong> Untung bersih bandar per ronde maksimal sebesar Udeg. Pemain kalah ditagih searah jarum jam; yang ayahannya sudah tidak muat di batas <strong>tidak membayar sama sekali</strong> (Bebas Udeg).</li>
             <li><strong>Rotasi bandar:</strong> Berpindah searah jarum jam tepat setelah 3 ronde selesai (tidak dipicu oleh 9 murni).</li>
           </ul>
         </section>
 
         <section>
-          <h3 style={{ margin: '0 0 8px' }}>Asumsi Terbuka (A01–A09)</h3>
+          <h3 style={{ margin: '0 0 8px' }}>Asumsi Terbuka (A01–A10)</h3>
           <p className="muted" style={{ margin: '0 0 10px', fontSize: '13px' }}>
             Default prototipe berikut bukan konfirmasi aturan lokal dan tercatat eksplisit dalam konfigurasi ruleset v1.0:
           </p>

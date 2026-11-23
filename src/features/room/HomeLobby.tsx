@@ -283,7 +283,7 @@ export function HomeLobby({
           </button>
 
           <button type="button" className="btn-ghost" onClick={onOpenRules}>
-            Panduan Aturan v1.0 & Asumsi (A01–A09)
+            Panduan Aturan v1.0 & Asumsi (A01–A10)
           </button>
         </section>
       ) : (

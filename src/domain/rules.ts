@@ -98,4 +98,11 @@ export const OPEN_ASSUMPTIONS: readonly OpenAssumption[] = Object.freeze([
       'Online mendukung Supabase Auth (anonymous/guest atau email); muka kartu domino kertas kuning dengan titik merah (dikonfirmasi pengguna).',
     status: 'ASUMSI_TERBUKA',
   },
+  {
+    id: 'A10',
+    title: 'Batas untung Bandar = Udeg',
+    defaultBehavior:
+      'Dikonfirmasi pengguna: untung bersih Bandar per ronde maksimal sebesar Udeg. Pemain kalah ditagih searah jarum jam; jika ayahan penuhnya sudah tidak muat di batas (Udeg + total bayaran ke pemenang), pemain itu tidak membayar sama sekali (Bebas Udeg, tidak ada bayar sebagian).',
+    status: 'ASUMSI_TERBUKA',
+  },
 ]);

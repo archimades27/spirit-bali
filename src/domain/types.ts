@@ -45,7 +45,7 @@ export interface GameRules {
 }
 
 export type SettlementOutcome = 'WIN' | 'LOSE'; // ties => LOSE
-export type PaymentStatus = 'PAID' | 'COLLECTED' | 'SKIPPED_UDEG';
+export type PaymentStatus = 'PAID' | 'COLLECTED' | 'SKIPPED_UDEG' | 'CAPPED_UDEG';
 
 export interface RoundSettlement {
   readonly roundId: string;

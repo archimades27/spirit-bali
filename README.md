@@ -53,9 +53,9 @@ Workflow `.github/workflows/deploy.yml` otomatis menjalankan `npm ci` → `npm r
    - `VITE_SUPABASE_PUBLISHABLE_KEY`
    - **Jangan pernah** menaruh `SUPABASE_SERVICE_ROLE_KEY` di frontend atau repository publik.
 
-## Aturan v1.0 & Asumsi Terbuka (A01–A09)
+## Aturan v1.0 & Asumsi Terbuka (A01–A10)
 - **Dikonfirmasi:** 1 Bandar vs 1–5 pemain; 28 kartu domino kertas double-six unik (belakang kuning titik merah); modal awal Rp1.000.000; bet kelipatan Rp10.000 setelah kartu pertama; semua peserta termasuk bandar boleh Stop atau Draw tepat 1 kartu ke-3; skor = total titik mod 10; Triple (3 balak berbeda) rank tertinggi; seri (termasuk Triple vs Triple) dimenangkan bandar; bandar menang dengan 9/Triple tetap menerima 1× bet; Udeg fixed/skip per ronde; rotasi bandar tepat setelah 3 ronde selesai (bukan karena 9 murni).
-- **Asumsi Terbuka (A01–A09):** Diterapkan sebagai default prototipe di `src/domain/rules.ts` dan ditampilkan di modal **Aturan v1.0** dalam aplikasi — bukan konfirmasi aturan lokal:
+- **Asumsi Terbuka (A01–A10):** Diterapkan sebagai default prototipe di `src/domain/rules.ts` dan ditampilkan di modal **Aturan v1.0** dalam aplikasi — bukan konfirmasi aturan lokal:
   - **A01:** Kekalahan pemain tetap dibayar 1× bet ke bandar dan tidak menambah sisa Udeg.
   - **A02:** Pengali kemenangan pemain default Normal `1×`, Nilai 9 `2×`, Triple `3×`.
   - **A03:** Nilai 9 dari 3 kartu tetap mendapat `2×`; 9 murni hanya metadata.
@@ -65,3 +65,4 @@ Workflow `.github/workflows/deploy.yml` otomatis menjalankan `npm ci` → `npm r
   - **A07:** Timeout Setup 60d, Betting 45d, Draw 30d (Draw → Stop; Setup/Betting → batal ronde sebelum reveal, lepas reserve, counter rotasi tidak bertambah).
   - **A08:** Kursi aktif dibekukan per ronde; join/leave efektif pada batas ronde.
   - **A09:** Supabase Auth guest/akun untuk online; pip depan charcoal pada kertas krem.
+  - **A10:** Untung bersih Bandar per ronde maksimal = Udeg. Pemain kalah ditagih searah jarum jam; yang ayahannya tidak muat lagi di batas tidak membayar sama sekali (`CAPPED_UDEG`, tanpa bayar sebagian). Migrasi `supabase/migrations/0002_udeg_profit_cap.sql`.

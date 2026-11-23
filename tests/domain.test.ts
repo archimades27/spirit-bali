@@ -322,6 +322,101 @@ describe('Spirit Bali v1.0 — Settlement & Udeg (T10–T15, T19, T21–T23, T25
   });
 });
 
+describe('Spirit Bali v1.0 — A10: Bandar profit capped at Udeg', () => {
+  it('Losers beyond the Udeg cap pay nothing (CAPPED_UDEG, no partial)', () => {
+    const settled = settleRound({
+      roundId: 'r-a10-basic',
+      dealerId: 'D',
+      dealerStartingBalance: 1_000_000,
+      dealerTiles: [[0, 5], [0, 4]], // 9
+      udegLimit: 100_000,
+      playersInOrder: [
+        { playerId: 'P1', seatOrder: 1, bet: 50_000, startingBalance: 1_000_000, tiles: [[1, 1], [0, 2]] },
+        { playerId: 'P2', seatOrder: 2, bet: 50_000, startingBalance: 1_000_000, tiles: [[1, 2], [0, 3]] },
+        { playerId: 'P3', seatOrder: 3, bet: 50_000, startingBalance: 1_000_000, tiles: [[1, 3], [2, 2]] },
+      ],
+    });
+    expect(settled.settlements.map((s) => s.balanceDelta)).toEqual([-50_000, -50_000, 0]);
+    expect(settled.settlements[2]?.outcome).toBe('LOSE');
+    expect(settled.settlements[2]?.paymentStatus).toBe('CAPPED_UDEG');
+    expect(settled.dealerDelta).toBe(100_000);
+  });
+
+  it('A loser that does not fit is skipped, smaller later losers still pay', () => {
+    const settled = settleRound({
+      roundId: 'r-a10-fit',
+      dealerId: 'D',
+      dealerStartingBalance: 1_000_000,
+      dealerTiles: [[0, 5], [0, 4]], // 9
+      udegLimit: 100_000,
+      playersInOrder: [
+        { playerId: 'P1', seatOrder: 1, bet: 90_000, startingBalance: 1_000_000, tiles: [[1, 1], [0, 2]] },
+        { playerId: 'P2', seatOrder: 2, bet: 50_000, startingBalance: 1_000_000, tiles: [[1, 2], [0, 3]] },
+        { playerId: 'P3', seatOrder: 3, bet: 10_000, startingBalance: 1_000_000, tiles: [[1, 3], [2, 2]] },
+      ],
+    });
+    expect(settled.settlements.map((s) => s.paymentStatus)).toEqual([
+      'COLLECTED',
+      'CAPPED_UDEG',
+      'COLLECTED',
+    ]);
+    expect(settled.dealerDelta).toBe(100_000);
+  });
+
+  it('Cap is on net profit: payouts to winners raise how much ayahan the Bandar may collect', () => {
+    const settled = settleRound({
+      roundId: 'r-a10-net',
+      dealerId: 'D',
+      dealerStartingBalance: 1_000_000,
+      dealerTiles: [[0, 5], [0, 0]], // 5
+      udegLimit: 100_000,
+      playersInOrder: [
+        { playerId: 'P1', seatOrder: 1, bet: 50_000, startingBalance: 1_000_000, tiles: [[3, 4], [0, 1]] }, // 8 WIN 50k
+        { playerId: 'P2', seatOrder: 2, bet: 80_000, startingBalance: 1_000_000, tiles: [[1, 1], [0, 2]] }, // 4 LOSE
+        { playerId: 'P3', seatOrder: 3, bet: 70_000, startingBalance: 1_000_000, tiles: [[1, 3], [0, 6]] }, // 0 LOSE
+      ],
+    });
+    // Allowed collection = 100k + 50k paid = 150k: P2 80k fits, P3 70k would make 150k -> fits exactly.
+    expect(settled.settlements.map((s) => s.balanceDelta)).toEqual([50_000, -80_000, -70_000]);
+    expect(settled.dealerDelta).toBe(100_000);
+  });
+
+  it('Bandar net delta always stays within [-Udeg, +Udeg] over random rounds', () => {
+    const base = createDeck();
+    for (let i = 0; i < 1000; i += 1) {
+      const deck = cryptoShuffle(base);
+      let idx = 0;
+      const take = (n: number): Tile[] => {
+        const res = deck.slice(idx, idx + n);
+        idx += n;
+        return res;
+      };
+      const udegLimit = ((i % 10) + 1) * 10_000;
+      const res = settleRound({
+        roundId: `a10-prop-${i}`,
+        dealerId: 'D',
+        dealerStartingBalance: 1_000_000,
+        dealerTiles: take(2),
+        udegLimit,
+        playersInOrder: [1, 2, 3, 4, 5].map((seat) => ({
+          playerId: `P${seat}`,
+          seatOrder: seat,
+          bet: (((i * seat) % 12) + 1) * 10_000,
+          startingBalance: 1_000_000,
+          tiles: take(2),
+        })),
+      });
+      expect(res.dealerDelta).toBeLessThanOrEqual(udegLimit);
+      expect(res.dealerDelta).toBeGreaterThanOrEqual(-udegLimit);
+      for (const s of res.settlements) {
+        if (s.paymentStatus === 'CAPPED_UDEG') {
+          expect(s.balanceDelta).toBe(0);
+        }
+      }
+    }
+  });
+});
+
 describe('Spirit Bali v1.0 — State Machine, Security, Rotation, Idempotency (T16–T20, T27–T36)', () => {
   it('T16 & T32: Rotates dealer only after exactly 3 completed rounds, never on pure 9', () => {
     const members = [

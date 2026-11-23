@@ -317,6 +317,7 @@ input[type="number"] {
    4-ZONE VERTICAL PORTRAIT GAME TABLE (ZERO SCROLL)
    ========================================================= */
 .portrait-game {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: grid;
@@ -580,7 +581,7 @@ input[type="number"] {
   grid-template-rows: 1fr 1fr;
   box-shadow: var(--shadow-card), 0 0 0 1px rgba(170, 128, 18, 0.55);
   flex-shrink: 0;
-  animation: deal-in 200ms ease-out both;
+  animation: deal-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
 
 .paper-domino.size-sm {
@@ -692,7 +693,7 @@ input[type="number"] {
 @keyframes deal-in {
   from {
     opacity: 0;
-    transform: translateY(-6px) scale(0.95);
+    transform: translateY(-22px) rotate(-8deg) scale(0.86);
   }
   to {
     opacity: 1;
@@ -764,6 +765,11 @@ tr:last-child td {
 
 .delta-skip {
   color: var(--gold);
+  font-weight: 700;
+}
+
+.delta-capped {
+  color: #b9c7ff;
   font-weight: 700;
 }
 
@@ -974,25 +980,15 @@ dialog::backdrop {
 
 .intensity-bar-fill {
   height: 100%;
+  width: 100%;
   border-radius: 99px;
-  transition: width 180ms ease, background-color 180ms ease;
+  background: linear-gradient(90deg, #65e0c2 0%, #f7d84c 38%, #ff8a2b 70%, #ff334b 100%);
+  transition: clip-path 220ms ease;
 }
 
-.intensity-bar-fill.tier-low {
-  background: var(--accent);
-}
 
-.intensity-bar-fill.tier-warm {
-  background: linear-gradient(90deg, #e5b242, #f7d84c);
-}
 
-.intensity-bar-fill.tier-hot {
-  background: linear-gradient(90deg, #f3a43b, #ff6a2b);
-}
 
-.intensity-bar-fill.tier-allin {
-  background: linear-gradient(90deg, #ff7b2b, #ff334b);
-}
 
 .bet-display.tier-low {
   color: var(--accent);
@@ -1174,6 +1170,7 @@ dialog::backdrop {
   justify-items: end;
   gap: 1px;
 }
+
 
 @media (prefers-reduced-motion: reduce) {
   *,

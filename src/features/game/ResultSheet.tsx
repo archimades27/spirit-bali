@@ -84,7 +84,9 @@ export function ResultSheet({ round, members }: ResultSheetProps) {
                   className={`mono ${
                     s.paymentStatus === 'SKIPPED_UDEG'
                       ? 'delta-skip'
-                      : s.balanceDelta >= 0
+                      : s.paymentStatus === 'CAPPED_UDEG'
+                        ? 'delta-capped'
+                        : s.balanceDelta >= 0
                         ? 'delta-pos'
                         : 'delta-neg'
                   }`}
@@ -92,6 +94,8 @@ export function ResultSheet({ round, members }: ResultSheetProps) {
                 >
                   {s.paymentStatus === 'SKIPPED_UDEG'
                     ? 'Rp0 (Skip)'
+                    : s.paymentStatus === 'CAPPED_UDEG'
+                      ? 'Rp0 (Bebas)'
                     : formatSignedRupiah(s.balanceDelta)}
                 </span>
               </div>
@@ -100,6 +104,10 @@ export function ResultSheet({ round, members }: ResultSheetProps) {
                 {s.paymentStatus === 'SKIPPED_UDEG' ? (
                   <span className="badge badge-gold">
                     Menang ({s.multiplier}×) · dilewati, Udeg tidak cukup
+                  </span>
+                ) : s.paymentStatus === 'CAPPED_UDEG' ? (
+                  <span className="badge">
+                    Kalah · bebas bayar, untung Bandar sudah = Udeg
                   </span>
                 ) : s.outcome === 'WIN' ? (
                   <span className="badge badge-mint">
